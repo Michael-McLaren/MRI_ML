@@ -1,0 +1,9 @@
+copying_mostly.ipynb
+.DS_Store
+notes
+.ipynb_checkpoints/
+.idea
+__pycache__
+MRI_other
+plots
+data/Example_Conc.npy
