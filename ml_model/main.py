@@ -184,6 +184,7 @@ def main(args):
     scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
 
     #note sure what sys.float_info does
+    #i believe it somehow gets the best loss so far and remembers it?
     best_loss = sys.float_info.max
     for epoch in range(1, args.epochs + 1):
         loss, acc = train(args, model, device, train_loader, optimizer, epoch)
