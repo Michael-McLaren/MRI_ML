@@ -5,37 +5,34 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import numpy as np
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 
 class Net(nn.Module):
+
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, 1)
-        self.conv2 = nn.Conv2d(32, 64, 3, 1)
-        self.dropout1 = nn.Dropout2d(0.25)
-        self.dropout2 = nn.Dropout2d(0.5)
-        self.fc1 = nn.Linear(9216, 128)
-        self.fc2 = nn.Linear(128, 10)
+        self.hidden = torch.nn.Linear(150, 200)  # hidden layer
+        self.hidden2 = torch.nn.Linear(200, 100)  # hidden layer
+        self.hidden3 = torch.nn.Linear(100, 50)
+        self.hidden4 = torch.nn.Linear(50, 300)
+        self.hidden5 = torch.nn.Linear(300, 200)
+        self.predict = torch.nn.Linear(200, 3)
 
     def forward(self, x):
-        x = self.conv1(x)
-        x = F.relu(x)
-        x = self.conv2(x)
-        x = F.max_pool2d(x, 2)
-        x = self.dropout1(x)
-        x = torch.flatten(x, 1)
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.dropout2(x)
-        x = self.fc2(x)
-        output = F.log_softmax(x, dim=1)
-        return output
+        x = F.relu(self.hidden(x))  # activation function for hidden layer
+        x = F.relu(self.hidden2(x))
+        x = F.relu(self.hidden3(x))
+        x = F.relu(self.hidden4(x))
+        x = F.relu(self.hidden5(x))
+        x = self.predict(x)  # linear output
+        return x
 
 
 def train(args, model, device, train_loader, optimizer, epoch):
     '''
-
+    One epoch looping over the batches
     :param args:
     :param model:
     :param device:
@@ -44,49 +41,52 @@ def train(args, model, device, train_loader, optimizer, epoch):
     :param epoch:
     :return:
     '''
-    model.train()
+    model.train() #if dropout is implemented
     train_loss = 0
-    correct = 0
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
-        optimizer.zero_grad()
-        output = model(data)
-        train_loss += F.nll_loss(output, target, reduction='sum').item()
-        pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
-        correct += pred.eq(target.view_as(pred)).sum().item()
-        loss = F.nll_loss(output, target)
-        loss.backward()
+        # optimizer.zero_grad()
+        # output = model(data)
+        # train_loss += F.nll_loss(output, target, reduction='sum').item()
+        # pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+        # correct += pred.eq(target.view_as(pred)).sum().item()
+        # loss = F.nll_loss(output, target)
+        # loss.backward()
+        # optimizer.step()
+
+
+        prediction = model(data)  # input x and predict based on x
+        loss = loss_fn_TOCHANGE(prediction, target)
+        train_loss += loss.item()
+        optimizer.zero_grad()  # clear gradients so it doesn't stack up over the loops
+        loss.backward()  # backprop
+
         optimizer.step()
+
         if batch_idx % args.log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item()))
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_idx * len(data), len(train_loader.dataset),
+                    100. * batch_idx / len(train_loader), loss.item()))
     
     train_loss /= len(train_loader.dataset)
-    accuracy = correct / len(train_loader.dataset)
-    return train_loss, accuracy
+    return train_loss
 
 
 def test(args, model, device, test_loader):
-    model.eval()
+    model.eval() #once again - for dropout
     test_loss = 0
-    correct = 0
-    with torch.no_grad():
+    with torch.no_grad(): #deactivate autograd
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
-            test_loss += F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
-            pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
-            correct += pred.eq(target.view_as(pred)).sum().item()
+            loss = loss_fn_TOCHANGE(output, target)
+            test_loss += loss.item()  # sum up batch loss
 
     test_loss /= len(test_loader.dataset)
 
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
+    print('\nTest set: Average loss: {:.4f}\n'.format(test_loss))
     
-    accuracy =  correct / len(test_loader.dataset)
-    return test_loss, accuracy
+    return test_loss
 
 #arguments to add in the terminal line
 #a convenience for ssh and running from terminal
@@ -137,7 +137,8 @@ def main(args):
         args.seed = torch.randint(0, 2**32, (1, )).item()
         print(f'You did not set --seed, {args.seed} was chosen')
     torch.manual_seed(args.seed)
-    #not entirely sure what this does
+
+    #This for making the model deterministic
     if use_cuda:
         if device.index:
             device_str = f"{device.type}:{device.index}"
@@ -160,35 +161,53 @@ def main(args):
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
 
     #Need to change the train and test loader
-    train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(args.input, train=True, download=True,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-        batch_size=args.batch_size, shuffle=True, **kwargs)
+    #In the form (batch, data - len 153)
+    inputs = np.load(args.input)
+    data = inputs[:,:150]
+    targets = inputs[:,150:]
+    if targets.shape[1] != 3:
+        print('Targets should have 3 values not ', targets.shape[1])
+        sys.exit()
 
-    test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(args.input, train=False, transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-        batch_size=args.test_batch_size, shuffle=True, **kwargs)
+
+    transform_data = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ])
+
+
+    transform_targets = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ])
+
+    data_transformed = transform_data(data)
+    train_loader = torch.utils.data.DataLoader(data_transformed,
+                                               batch_size=args.batch_size,
+                                               shuffle=True,
+                                               **kwargs)
+
+
+    targets_transformed = transform_targets(targets)
+    test_loader = torch.utils.data.DataLoader(targets_transformed,
+                                              batch_size=args.test_batch_size,
+                                              shuffle=True,
+                                              **kwargs)
 
     model = Net().to(device)
     optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
 
     log_fh = open(f'{args.output}/{model_name}.log', 'w') #possibly change this line?
-    print('epoch,trn_loss,trn_acc,vld_loss,vld_acc', file=log_fh)
+    print('epoch,trn_loss,vld_loss', file=log_fh) #need to remove the acc line
     #decays learning rate every step size to lr * gamma
-    scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
+    scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma) #defo change the the schedule
 
     #note sure what sys.float_info does
     #i believe it somehow gets the best loss so far and remembers it?
     best_loss = sys.float_info.max
     for epoch in range(1, args.epochs + 1):
-        loss, acc = train(args, model, device, train_loader, optimizer, epoch)
-        vld_loss, vld_acc = test(args, model, device, test_loader)
+        loss = train(args, model, device, train_loader, optimizer, epoch)
+        vld_loss = test(args, model, device, test_loader)
         print(f'{epoch},{loss},{acc},{vld_loss},{vld_acc}', file=log_fh)
         scheduler.step()
         if vld_loss < best_loss:

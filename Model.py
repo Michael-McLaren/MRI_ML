@@ -14,28 +14,6 @@ from TwoCUM_copy import TwoCUMfittingConc
 from TwoCUM_copy import TwoCUM
 
 
-def generate_xy(num_curves):
-    AIF = np.load("MRI_other/TK_Modelling/AIF.npy")
-    data_size = AIF.shape[0]
-    t = np.arange(0, 366, 2.45)
-
-    E = np.random.rand(1, num_curves)  # 0 to 1 for both E and vp
-    vp = np.random.rand(1, num_curves)
-    Fp = abs(np.random.normal(size=num_curves, loc=1e-5, scale=1e-4)[None, :])
-
-    E_Fp = np.concatenate((E, Fp), axis=0)
-    y = np.concatenate((E_Fp, vp), axis=0)
-
-    fitted_data2 = [0.999999999987e+00, 2.00000000e-05, 1.00000000e-02]
-    fitted_curve2 = TwoCUM(fitted_data2[0:3], t, AIF, 0)
-
-    x = np.zeros((num_curves, data_size))
-    for i in range(num_curves):
-        x[i] = TwoCUM(y[:, i], t, AIF, 0)
-
-    y = y.T
-
-    return x, y
 
 def loss_fn(outputs, targets):
     return 0
