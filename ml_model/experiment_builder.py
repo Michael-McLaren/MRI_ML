@@ -57,7 +57,7 @@ class ExperimentBuilder(nn.Module):
         print('NOT IMPLEMENTED')
 
 
-        self.optimizer = optim.Adam(self.parameters(), amsgrad=False,
+        self.optimizer = optim.AdamW(self.parameters(),
                                     weight_decay=weight_decay_coefficient)
         # self.learning_rate_scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer,
         #                                                                     T_max=num_epochs,
@@ -70,7 +70,7 @@ class ExperimentBuilder(nn.Module):
 
         # Set best models to be at 0 since we are just starting
         self.best_val_model_idx = 0
-        self.best_val_model_acc = 0.
+        self.best_val_model_loss = 0.
 
         if not os.path.exists(self.experiment_folder):  # If experiment directory does not exist
             os.mkdir(self.experiment_folder)  # create the experiment directory
@@ -79,7 +79,7 @@ class ExperimentBuilder(nn.Module):
 
         self.num_epochs = num_epochs
         self.criterion = nn.CrossEntropyLoss().to(self.device)  # send the loss computation to the GPU
-
+        self.AIF = torch.from_numpy(np.load("../data/AIF.npy"))
         '''
         if continue_from_epoch == -2:  # if continue from epoch is -2 then continue from latest saved model
             self.state, self.best_val_model_idx, self.best_val_model_acc = self.load_model(
@@ -97,7 +97,7 @@ class ExperimentBuilder(nn.Module):
         else:
             self.state = dict()
             self.starting_epoch = 0
-        '''
+        '''  
 
     def data(self):
         #generate train, val data and load test data
