@@ -96,7 +96,7 @@ class ExperimentBuilder(nn.Module):
         return loss
     
     def save_model(self, model_save_dir, model_save_name, model_idx, best_validation_model_idx,
-                   best_validation_model_acc):
+                   best_validation_model_loss):
         """
         Save the network parameter state and current best val epoch idx and best val accuracy.
         :param model_save_name: Name to use to save model without the epoch index
@@ -108,6 +108,118 @@ class ExperimentBuilder(nn.Module):
         """
         self.state['network'] = self.state_dict()  # save network parameter and other variables.
         self.state['best_val_model_idx'] = best_validation_model_idx  # save current best val idx
-        self.state['best_val_model_acc'] = best_validation_model_acc  # save current best val acc
+        self.state['best_val_model_loss'] = best_validation_model_loss  # save current best val acc
         torch.save(self.state, f=os.path.join(model_save_dir, "{}_{}".format(model_save_name, str(
             model_idx))))  # save state at prespecified filepath
+        
+    
+    
+    def load_model(self, model_save_dir, model_save_name, model_idx):
+        """
+        Load the network parameter state and the best val model idx and best val acc to be compared with the future val accuracies, in order to choose the best val model
+        :param model_save_dir: The directory to store the state at.
+        :param model_save_name: Name to use to save model without the epoch index
+        :param model_idx: The index to save the model with.
+        :return: best val idx and best val model acc, also it loads the network state into the system state without returning it
+        """
+        state = torch.load(f=os.path.join(model_save_dir, "{}_{}".format(model_save_name, str(model_idx))))
+        self.load_state_dict(state_dict=state['network'])
+        return state, state['best_val_model_idx'], state['best_val_model_loss']
+    
+    def save_statistics(experiment_log_dir, filename, stats_dict, current_epoch, continue_from_mode=False):
+        """
+        Saves the statistics in stats dict into a csv file. Using the keys as the header entries and the values as the
+        columns of a particular header entry
+        :param experiment_log_dir: the log folder dir filepath
+        :param filename: the name of the csv file
+        :param stats_dict: the stats dict containing the data to be saved
+        :param current_epoch: the number of epochs since commencement of the current training session (i.e. if the experiment continued from 100 and this is epoch 105, then pass relative distance of 5.)
+        :param save_full_dict: whether to save the full dict as is overriding any previous entries (might be useful if we want to overwrite a file)
+        :return: The filepath to the summary file
+        """
+        
+        summary_filename = os.path.join(experiment_log_dir, filename)
+        mode = 'a' if continue_from_mode else 'w' #append unless its the header
+        with open(summary_filename, mode) as f:
+            writer = csv.writer(f)
+            
+            #writes the header
+            if not continue_from_mode:
+                writer.writerow(list(stats_dict.keys()))
+            
+            #writes the main part
+            else:
+                row_to_add = [value[current_epoch] for value in list(stats_dict.values())]
+                writer.writerow(row_to_add)
+    
+        return summary_filename
+
+    def load_statistics(self, experiment_log_dir, filename):
+        """
+        Loads a statistics csv file into a dictionary
+        :param experiment_log_dir: the log folder dir filepath
+        :param filename: the name of the csv file to load
+        :return: A dictionary containing the stats in the csv file. Header entries are converted into keys and columns of a
+         particular header are converted into values of a key in a list format.
+        """
+        summary_filename = os.path.join(experiment_log_dir, filename)
+
+        with open(summary_filename, 'r+') as f:
+            lines = f.readlines()
+
+        keys = lines[0].split(",")
+        stats = {key: [] for key in keys}
+        for line in lines[1:]:
+            values = line.split(",")
+            for idx, value in enumerate(values):
+                stats[keys[idx]].append(value)
+
+        return stats
+
+    def run_experiment(self):
+        
+        #this is for the mean values
+        total_losses = {"train_loss": [], "val_loss": []}  # initialize a dict to keep the per-epoch metrics
+        
+        for epoch_idx in range(self.num_epochs):
+            epoch_start_time = time.time()
+            current_epoch_losses = {"train_loss": [], "val_loss": []} #mini batch train and val loss
+            self.current_epoch = epoch_idx
+            
+            #training run through
+            with tqdm.tqdm(total=len(self.train_data)) as pbar_train:  # create a progress bar for training
+                for idx, (x, y) in enumerate(self.train_data):  # get data batches
+                    loss = self.run_train_iter(x=x, y=y)  # take a training iter step
+                    current_epoch_losses["train_loss"].append(loss)  # add current iter loss to the train loss list
+                    #descriptive stuff to make it pretty
+                    pbar_train.update(1)
+                    pbar_train.set_description("loss: {:.4f}".format(loss))
+            
+            #validation run through
+            with tqdm.tqdm(total=len(self.val_data)) as pbar_val:  # create a progress bar for validation
+                for x, y in self.val_data:  # get data batches
+                    loss = self.run_evaluation_iter(x=x, y=y)  # run a validation iter
+                    current_epoch_losses["val_loss"].append(loss)  # add current iter loss to val loss list.
+                                        
+                    #descriptive stuff to make it pretty
+                    pbar_val.update(1)  # add 1 step to the progress bar
+                    pbar_val.set_description("loss: {:.4f}".format(loss))
+                    
+            #if it does better on the val data then save it
+            val_mean_loss = np.mean(current_epoch_losses['val_loss'])
+            if val_mean_loss < self.best_val_model_loss:  # save the best val loss
+                self.best_val_model_loss = val_mean_loss  # set the best val model acc to be current epoch's val accuracy
+                self.best_val_model_idx = epoch_idx  # set the experiment-wise best val idx to be the current epoch's idx
+
+            for key, value in current_epoch_losses.items():
+                total_losses[key].append(np.mean(
+                    value))  # get mean of all metrics of current epoch metrics dict, to get them ready for storage and output on the terminal.
+
+            self.save_statistics(experiment_log_dir=self.experiment_logs, filename='summary.csv',
+                            stats_dict=total_losses, current_epoch=epoch_idx,
+                            continue_from_mode=True if (epoch_idx > 0) else False)  # save statistics to stats file.
+
+                    
+                    
+                    
+                    
