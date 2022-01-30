@@ -9,6 +9,8 @@ Created on Tue Jan 25 20:41:40 2022
 import numpy as np
 import scipy.stats as st
 
+from tkmodel.TwoCUM_copy import TwoCUMfittingConc
+from tkmodel.TwoCUM_copy import TwoCUM
 
 def E_distribution(num):
     p = 0.09392265193370165
@@ -67,7 +69,7 @@ def vp_distrubition(num):
 
 
 def generate_xy(num_curves):
-    AIF = np.load("data/AIF.npy")
+    AIF = np.load("../data/AIF.npy")
     data_size = AIF.shape[0]
     t = np.arange(0,366,2.45)
 

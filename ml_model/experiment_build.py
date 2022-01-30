@@ -15,6 +15,7 @@ import numpy as np
 import time
 import csv
 
+from combined_loss import combined
 
 class ExperimentBuilder(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data,
@@ -44,9 +45,9 @@ class ExperimentBuilder(nn.Module):
 
         
         self.model.reset_parameters()  # re-initialize network parameters
-        self.train_data = None 
-        self.val_data = None
-        self.test_data = None
+        self.train_data = train_data 
+        self.val_data = val_data
+        self.test_data = test_data
         
         self.optimizer = optim.AdamW(self.parameters(),
                                     weight_decay=weight_decay_coefficient)
@@ -123,7 +124,7 @@ class ExperimentBuilder(nn.Module):
         :return: best val idx and best val model acc, also it loads the network state into the system state without returning it
         """
         state = torch.load(f=os.path.join(model_save_dir, "{}_{}".format(model_save_name, str(model_idx))))
-        self.load_state_dict(state_dict=state['network'])
+        self.load_state_dict(state_dict=state['network']) #loads model using pytorch function
         return state, state['best_val_model_idx'], state['best_val_model_loss']
     
     def save_statistics(experiment_log_dir, filename, stats_dict, current_epoch, continue_from_mode=False):
@@ -220,6 +221,22 @@ class ExperimentBuilder(nn.Module):
                             continue_from_mode=True if (epoch_idx > 0) else False)  # save statistics to stats file.
 
                     
-                    
-                    
-                    
+            out_string = "_".join(["{}_{:.4f}".format(key, np.mean(value)) for key, value in current_epoch_losses.items()])
+            epoch_elapsed_time = time.time() - epoch_start_time  # calculate time taken for epoch
+            epoch_elapsed_time = "{:.4f}".format(epoch_elapsed_time)
+            print("Epoch {}:".format(epoch_idx), out_string, "epoch time", epoch_elapsed_time, "seconds")
+            
+            self.save_model(model_save_dir=self.experiment_saved_models,
+            # save model and best val idx and best val acc, using the model dir, model name and model idx
+                model_save_name="train_model", model_idx=epoch_idx,
+                best_validation_model_idx=self.best_val_model_idx,
+                best_validation_model_acc=self.best_val_model_acc)
+            
+            
+            
+            
+            
+            
+            
+            
+            

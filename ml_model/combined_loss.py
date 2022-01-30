@@ -34,7 +34,7 @@ def loss_fn_batch(outputs, targets):
     t = torch.tensor(t)
     
     batch_size = outputs[:,0].shape[0]
-    AIF = torch.from_numpy(np.load("data/AIF.npy"))
+    AIF = torch.from_numpy(np.load("../data/AIF.npy")) #WOULD THIS SLOW IT DOWN
     AIF1 = AIF.view(1, 1, -1) #reshaped for convolution
 
     

@@ -5,6 +5,11 @@ Created on Wed Jan 12 09:56:39 2022
 
 @author: s1740929
 """
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
 
 class Net(nn.Module):
     def __init__(self):
