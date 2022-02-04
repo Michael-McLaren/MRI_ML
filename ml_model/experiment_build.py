@@ -14,6 +14,7 @@ import os
 import numpy as np
 import time
 import csv
+import matplotlib.pyplot as plt
 
 from combined_loss import combined
 
@@ -43,8 +44,8 @@ class ExperimentBuilder(nn.Module):
         self.state = dict()
         self.starting_epoch = 0
 
-        
-        self.model.reset_parameters()  # re-initialize network parameters
+        # read more about using moduledict
+        # self.model.reset_parameters()  # re-initialize network parameters
         self.train_data = train_data 
         self.val_data = val_data
         self.test_data = test_data
@@ -69,7 +70,7 @@ class ExperimentBuilder(nn.Module):
         
         self.num_epochs = num_epochs
         self.criterion = combined  # send the loss computation to the GPU
-        self.AIF = torch.from_numpy(np.load("../data/AIF.npy"))
+        self.AIF = torch.from_numpy(np.load("data/AIF.npy"))
         self.time = np.arange(0,366,2.45)
         
     def run_train_iter(self, x, y):
@@ -127,7 +128,7 @@ class ExperimentBuilder(nn.Module):
         self.load_state_dict(state_dict=state['network']) #loads model using pytorch function
         return state, state['best_val_model_idx'], state['best_val_model_loss']
     
-    def save_statistics(experiment_log_dir, filename, stats_dict, current_epoch, continue_from_mode=False):
+    def save_statistics(self, experiment_log_dir, filename, stats_dict, current_epoch, continue_from_mode=False):
         """
         Saves the statistics in stats dict into a csv file. Using the keys as the header entries and the values as the
         columns of a particular header entry
@@ -169,13 +170,27 @@ class ExperimentBuilder(nn.Module):
             lines = f.readlines()
 
         keys = lines[0].split(",")
+        keys = [key.strip('\n') for key in keys]
         stats = {key: [] for key in keys}
         for line in lines[1:]:
             values = line.split(",")
             for idx, value in enumerate(values):
-                stats[keys[idx]].append(value)
+                value = value.strip('\n')
+                stats[keys[idx]].append(float(value))
 
         return stats
+    
+    def loss_plot(self):
+        
+        stats = self.load_statistics(self.experiment_logs, 'summary.csv')
+        for key, value in stats.items():
+            plt.plot(value, label = key)
+            
+            
+        plt.legend()
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.show()
 
     def run_experiment(self):
         
@@ -191,7 +206,7 @@ class ExperimentBuilder(nn.Module):
             with tqdm.tqdm(total=len(self.train_data)) as pbar_train:  # create a progress bar for training
                 for idx, (x, y) in enumerate(self.train_data):  # get data batches
                     loss = self.run_train_iter(x=x, y=y)  # take a training iter step
-                    current_epoch_losses["train_loss"].append(loss)  # add current iter loss to the train loss list
+                    current_epoch_losses["train_loss"].append(loss.detach().numpy())  # add current iter loss to the train loss list
                     #descriptive stuff to make it pretty
                     pbar_train.update(1)
                     pbar_train.set_description("loss: {:.4f}".format(loss))
@@ -200,7 +215,7 @@ class ExperimentBuilder(nn.Module):
             with tqdm.tqdm(total=len(self.val_data)) as pbar_val:  # create a progress bar for validation
                 for x, y in self.val_data:  # get data batches
                     loss = self.run_evaluation_iter(x=x, y=y)  # run a validation iter
-                    current_epoch_losses["val_loss"].append(loss)  # add current iter loss to val loss list.
+                    current_epoch_losses["val_loss"].append(loss.detach().numpy())  # add current iter loss to val loss list.
                                         
                     #descriptive stuff to make it pretty
                     pbar_val.update(1)  # add 1 step to the progress bar
@@ -209,16 +224,17 @@ class ExperimentBuilder(nn.Module):
             #if it does better on the val data then save it
             val_mean_loss = np.mean(current_epoch_losses['val_loss'])
             if val_mean_loss < self.best_val_model_loss:  # save the best val loss
-                self.best_val_model_loss = val_mean_loss  # set the best val model acc to be current epoch's val accuracy
+                self.best_val_model_loss = val_mean_loss  # set the best val model loss to be current epoch's val accuracy
                 self.best_val_model_idx = epoch_idx  # set the experiment-wise best val idx to be the current epoch's idx
 
             for key, value in current_epoch_losses.items():
-                total_losses[key].append(np.mean(
-                    value))  # get mean of all metrics of current epoch metrics dict, to get them ready for storage and output on the terminal.
-
-            self.save_statistics(experiment_log_dir=self.experiment_logs, filename='summary.csv',
-                            stats_dict=total_losses, current_epoch=epoch_idx,
-                            continue_from_mode=True if (epoch_idx > 0) else False)  # save statistics to stats file.
+                total_losses[key].append(np.mean(value))  # get mean of all metrics of current epoch metrics dict, to get them ready for storage and output on the terminal.
+            
+            self.save_statistics(experiment_log_dir=self.experiment_logs, 
+                                 filename='summary.csv',
+                                 stats_dict=total_losses, 
+                                 current_epoch=epoch_idx,
+                                 continue_from_mode=True if (epoch_idx > 0) else False)  # save statistics to stats file.
 
                     
             out_string = "_".join(["{}_{:.4f}".format(key, np.mean(value)) for key, value in current_epoch_losses.items()])
@@ -230,9 +246,13 @@ class ExperimentBuilder(nn.Module):
             # save model and best val idx and best val acc, using the model dir, model name and model idx
                 model_save_name="train_model", model_idx=epoch_idx,
                 best_validation_model_idx=self.best_val_model_idx,
-                best_validation_model_acc=self.best_val_model_acc)
+                best_validation_model_loss=self.best_val_model_loss)
             
-            
+        model_path = [self.experiment_saved_models]
+        stat_path = [self.experiment_logs, 'summary.csv'] #subject to change if save_stats changes
+        
+        return stat_path, model_path
+    
             
             
             

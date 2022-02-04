@@ -1,34 +1,27 @@
 import argparse
 
+
 def get_args():
     """
     Returns a namedtuple with arguments extracted from the command line.
     :return: A namedtuple with arguments
     """
-    parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
-    parser.add_argument('--batch-size', type=int, default=64, metavar='N',
-                        help='input batch size for training (default: 64)')
-    parser.add_argument('--test-batch-size', type=int, default=1000,
-                        metavar='N', help='input batch size for testing '
-                                          '(default: 1000)')
-    parser.add_argument('--epochs', type=int, default=14, metavar='N',
-                        help='number of epochs to train (default: 10)')
-    parser.add_argument('--lr', type=float, default=1.0, metavar='LR',
-                        help='learning rate (default: 1.0)')
-    parser.add_argument('--gamma', type=float, default=0.7, metavar='M',
-                        help='Learning rate step gamma (default: 0.7)')
-    parser.add_argument('--no-cuda', action='store_true', default=False,
-                        help='disables CUDA training')
-    parser.add_argument('--seed', type=int, default=None, metavar='S',
-                        help='random seed (default: random number)')
-    parser.add_argument('--log-interval', type=int, default=10, metavar='N',
-                        help='how many batches to wait before logging '
-                             'training status')
+    parser = argparse.ArgumentParser(
+        description='Welcome to my new helper script boi')
 
-    parser.add_argument('-i', '--input', required=True, help='Path to the '
-                                                             'input data for the model to read')
-    parser.add_argument('-o', '--output', required=True, help='Path to the '
-                                                              'directory to write output to')
+    parser.add_argument('--batch_size', nargs="?", type=int, default=100, help='Batch_size for experiment')
+    
+    parser.add_argument('--batch_size_test', nargs="?", type=int, default=1000, help='Batch_size for testing')
+
+    
+    parser.add_argument('--num_epochs', nargs="?", type=int, default=100, help='Total number of epochs for model training')
+    
+    parser.add_argument('--experiment_name', nargs="?", type=str, default="exp_1",
+                        help='Experiment name - to be used for building the experiment folder')
+    
+    parser.add_argument('--weight_decay_coefficient', nargs="?", type=float, default=0.01,
+                        help='Weight decay to use for Adam')
+
     args = parser.parse_args()
     print(args)
     return args
