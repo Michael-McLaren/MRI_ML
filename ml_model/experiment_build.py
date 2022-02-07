@@ -193,8 +193,8 @@ class ExperimentBuilder(nn.Module):
         plt.legend()
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
-        plt.show()
         plt.savefig(file_name)
+        plt.clf()
         
     def pk_dist(self):
         for i, (val_x, val_y) in enumerate(self.val_data):
@@ -213,17 +213,17 @@ class ExperimentBuilder(nn.Module):
         df = pd.DataFrame(full_val, columns = ['E_pred','Fp_pred','vp_pred','E_true','Fp_true','vp_true'])   
         print(df)
         
-        file_name = os.path.join(self.experiment_logs, 'E_violin')
+        file_name = os.path.join(self.experiment_logs, 'E_violin.png')
         sns.violinplot(data=df[['E_pred', 'E_true']])
         plt.savefig(file_name)
         plt.clf()
         
-        file_name = os.path.join(self.experiment_logs, 'Fp_violin')
+        file_name = os.path.join(self.experiment_logs, 'Fp_violin.png')
         sns.violinplot(data=df[['Fp_pred', 'Fp_true']])
         plt.savefig(file_name)
         plt.clf()
         
-        file_name = os.path.join(self.experiment_logs, 'vp_violin')
+        file_name = os.path.join(self.experiment_logs, 'vp_violin.png')
         sns.violinplot(data=df[['vp_pred', 'vp_true']])
         plt.savefig(file_name)
         plt.clf()
@@ -232,21 +232,21 @@ class ExperimentBuilder(nn.Module):
         fig, ax = plt.subplots()
         sns.kdeplot(df['E_pred'], ax=ax)
         sns.kdeplot(df['E_true'], ax=ax)
-        file_name = os.path.join(self.experiment_logs, 'E_kde')
+        file_name = os.path.join(self.experiment_logs, 'E_kde.png')
         plt.savefig(file_name)
         plt.clf()
         
         fig, ax = plt.subplots()
         sns.kdeplot(df['Fp_true'], ax=ax)
         sns.kdeplot(df['Fp_pred'], ax=ax)
-        file_name = os.path.join(self.experiment_logs, 'Fp_kde')
+        file_name = os.path.join(self.experiment_logs, 'Fp_kde.png')
         plt.savefig(file_name)
         plt.clf()
         
         fig, ax = plt.subplots()
         sns.kdeplot(df['vp_pred'], ax=ax)
         sns.kdeplot(df['vp_true'], ax=ax)
-        file_name = os.path.join(self.experiment_logs, 'vp_kde')
+        file_name = os.path.join(self.experiment_logs, 'vp_kde.png')
         plt.savefig(file_name)
         plt.clf()
 

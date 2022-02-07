@@ -54,9 +54,10 @@ def main():
     
     stat_path, model_path = mri_experiment.run_experiment()  # run experiment and return experiment metrics
     
-    stats = mri_experiment.load_statistics(stat_path[0], stat_path[1])
     
     mri_experiment.loss_plot()
+    
+    mri_experiment.pk_dist()
     
 if __name__ == '__main__':
     main()
