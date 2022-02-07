@@ -191,6 +191,7 @@ class ExperimentBuilder(nn.Module):
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
         plt.show()
+        plt.savefig(self.experiment_logs)
 
     def run_experiment(self):
         
