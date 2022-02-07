@@ -15,6 +15,8 @@ import numpy as np
 import time
 import csv
 import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
 
 from combined_loss import combined
 
@@ -186,12 +188,67 @@ class ExperimentBuilder(nn.Module):
         for key, value in stats.items():
             plt.plot(value, label = key)
             
+        file_name = os.path.join(self.experiment_logs, 'loss')
             
         plt.legend()
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
         plt.show()
-        plt.savefig(self.experiment_logs)
+        plt.savefig(file_name)
+        
+    def pk_dist(self):
+        for i, (val_x, val_y) in enumerate(self.val_data):
+            prediction_val = self.model.forward(val_x)
+            prediction_val = prediction_val.detach().numpy()
+            val_y = val_y.detach().numpy()
+            
+            combined_values = np.concatenate((prediction_val, val_y), axis = 1)
+            
+            if i == 0:
+                full_val = combined_values
+            else:
+                print(full_val.shape, combined_values.shape)
+                full_val = np.concatenate((full_val, combined_values))
+        
+        df = pd.DataFrame(full_val, columns = ['E_pred','Fp_pred','vp_pred','E_true','Fp_true','vp_true'])   
+        print(df)
+        
+        file_name = os.path.join(self.experiment_logs, 'E_violin')
+        sns.violinplot(data=df[['E_pred', 'E_true']])
+        plt.savefig(file_name)
+        plt.clf()
+        
+        file_name = os.path.join(self.experiment_logs, 'Fp_violin')
+        sns.violinplot(data=df[['Fp_pred', 'Fp_true']])
+        plt.savefig(file_name)
+        plt.clf()
+        
+        file_name = os.path.join(self.experiment_logs, 'vp_violin')
+        sns.violinplot(data=df[['vp_pred', 'vp_true']])
+        plt.savefig(file_name)
+        plt.clf()
+        
+
+        fig, ax = plt.subplots()
+        sns.kdeplot(df['E_pred'], ax=ax)
+        sns.kdeplot(df['E_true'], ax=ax)
+        file_name = os.path.join(self.experiment_logs, 'E_kde')
+        plt.savefig(file_name)
+        plt.clf()
+        
+        fig, ax = plt.subplots()
+        sns.kdeplot(df['Fp_true'], ax=ax)
+        sns.kdeplot(df['Fp_pred'], ax=ax)
+        file_name = os.path.join(self.experiment_logs, 'Fp_kde')
+        plt.savefig(file_name)
+        plt.clf()
+        
+        fig, ax = plt.subplots()
+        sns.kdeplot(df['vp_pred'], ax=ax)
+        sns.kdeplot(df['vp_true'], ax=ax)
+        file_name = os.path.join(self.experiment_logs, 'vp_kde')
+        plt.savefig(file_name)
+        plt.clf()
 
     def run_experiment(self):
         
