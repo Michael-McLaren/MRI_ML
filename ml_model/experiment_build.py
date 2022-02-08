@@ -20,6 +20,7 @@ import pandas as pd
 
 from combined_loss import combined
 
+
 class ExperimentBuilder(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data,
                  test_data, weight_decay_coefficient):
@@ -230,27 +231,29 @@ class ExperimentBuilder(nn.Module):
         
 
         fig, ax = plt.subplots()
-        sns.kdeplot(df['E_pred'], ax=ax)
-        sns.kdeplot(df['E_true'], ax=ax)
+        sns.kdeplot(df['E_pred'], ax=ax, label = 'Predicted')
+        sns.kdeplot(df['E_true'], ax=ax, label = 'True')
+        fig.legend()
         file_name = os.path.join(self.experiment_logs, 'E_kde.png')
         plt.savefig(file_name)
         plt.clf()
         
         fig, ax = plt.subplots()
-        sns.kdeplot(df['Fp_true'], ax=ax)
-        sns.kdeplot(df['Fp_pred'], ax=ax)
+        sns.kdeplot(df['Fp_true'], ax=ax, label = 'Predicted')
+        sns.kdeplot(df['Fp_pred'], ax=ax, label = 'True')
+        fig.legend()
         file_name = os.path.join(self.experiment_logs, 'Fp_kde.png')
         plt.savefig(file_name)
         plt.clf()
         
         fig, ax = plt.subplots()
-        sns.kdeplot(df['vp_pred'], ax=ax)
-        sns.kdeplot(df['vp_true'], ax=ax)
+        sns.kdeplot(df['vp_pred'], ax=ax, label = 'Predicted')
+        sns.kdeplot(df['vp_true'], ax=ax, label = 'True')
+        fig.legend()
         file_name = os.path.join(self.experiment_logs, 'vp_kde.png')
         plt.savefig(file_name)
         plt.clf()
         
-    def show_example_curves(self):
 
     def run_experiment(self):
         
@@ -311,7 +314,7 @@ class ExperimentBuilder(nn.Module):
         model_path = self.experiment_saved_models
         folder_path = self.experiment_folder #subject to change if save_stats changes
         
-        return stat_path, model_path
+        return folder_path, model_path
     
             
             

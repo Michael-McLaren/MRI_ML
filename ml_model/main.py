@@ -33,12 +33,14 @@ def main():
     batch_train = args.batch_size
     uterus_train_data = uterus(num_train)
     uterus_train_data.add_noise()
+    uterus_train_data.save_data('trained_models', 'train_data')
     train_data_loader = uterus_train_data.return_dataloader(batch_train)
     
     num_val = 3000
     batch_val = args.batch_size_test
     uterus_val_data = uterus(num_val)
     uterus_val_data.add_noise()
+    uterus_val_data.save_data('trained_models', 'val_data')
     val_data_loader = uterus_val_data.return_dataloader(batch_val)
 
     
@@ -54,8 +56,8 @@ def main():
                                         train_data=train_data_loader, val_data=val_data_loader,
                                         test_data=None)  # build an experiment object
     
-    stat_path, model_path = mri_experiment.run_experiment()  # run experiment and return experiment metrics
-    print('\n stat_path: ', stat_path)
+    folder_path, model_path = mri_experiment.run_experiment()  # run experiment and return experiment metrics
+    print('\n stat_path: ', folder_path)
     print('\n model_path: ', model_path)
 
     

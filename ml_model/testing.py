@@ -34,15 +34,27 @@ def main():
     num_train = 10000
     batch_train = args.batch_size
     uterus_train_data = uterus(num_train)
+    
+    #LOAD DATA
+    uterus_train_data.load_data('trained_models', 'train_data')
     train_data_loader = uterus_train_data.return_dataloader(batch_train)
     
     num_val = 3000
     batch_val = args.batch_size_test
     uterus_val_data = uterus(num_val)
+    
+    #LOAD DATA
+    uterus_val_data.save_data('trained_models', 'val_data')
     val_data_loader = uterus_val_data.return_dataloader(batch_val)
     
-    uterus_val_data.plot_both()
-
+    mri_experiment = ExperimentBuilder(network_model=custom_conv_net,
+                                        experiment_name=args.experiment_name,
+                                        num_epochs=args.num_epochs,
+                                        weight_decay_coefficient=args.weight_decay_coefficient,
+                                        train_data=train_data_loader, val_data=val_data_loader,
+                                        test_data=None)  # build an experiment object
+    model_path = '/afs/inf.ed.ac.uk/user/s17/s1740929/MRI_ML/trained_models/testing/saved_models'
+    mri_experiment.load_model(model_path, 'train_model', 98)
 
 if __name__ == '__main__':
     main()

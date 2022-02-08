@@ -24,7 +24,7 @@ class tissue():
     def __init__(self):
         pass
         
-    def create_dataloader(self, x, y, batch_size):
+    def create_dataloader(self, x, y, batch_size, shuffle = True):
     
         x = torch.from_numpy(x).float()
         y = torch.from_numpy(y).float()
@@ -32,7 +32,7 @@ class tissue():
         
         torch_dataset = Data.TensorDataset(x, y) 
     
-        dataloader = Data.DataLoader(torch_dataset, batch_size=batch_size, shuffle=True) 
+        dataloader = Data.DataLoader(torch_dataset, batch_size=batch_size, shuffle=shuffle) 
         
         return dataloader
 
@@ -57,8 +57,8 @@ class uterus(tissue):
         path = os.path.join(experiment_folder, 'data')
         path_x = os.path.join(path, name + '_x')
         path_y = os.path.join(path, name + '_y')
-        np.save(path_x self.x)
-        np.save(path_y self.y)
+        np.save(path_x, self.x)
+        np.save(path_y, self.y)
         
     def load_data(self, experiment_folder, name):
         '''
@@ -68,8 +68,8 @@ class uterus(tissue):
         path = os.path.join(experiment_folder, 'data')
         path_x = os.path.join(path, name + '_x')
         path_y = os.path.join(path, name + '_y')
-        self.x = np.load(path_x self.x)
-        self.y = np.load(path_y self.y)
+        self.x = np.load(path_x, self.x)
+        self.y = np.load(path_y, self.y)
         self.num = self.x.shape[0]
 
         
@@ -203,10 +203,10 @@ class uterus(tissue):
         plt.show()        
 
         
-    def return_dataloader(self, batch_size):
+    def return_dataloader(self, batch_size, shuffle = True):
         
         norm_x = self.normalise(self.x)
-        dataloader = self.create_dataloader(norm_x, self.y, batch_size)
+        dataloader = self.create_dataloader(norm_x, self.y, batch_size, shuffle)
         
         return dataloader
         
