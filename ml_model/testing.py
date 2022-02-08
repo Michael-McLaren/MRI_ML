@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Feb  7 19:19:27 2022
+
+@author: s1740929
+"""
 
 import numpy as np
 import torch
@@ -10,13 +17,8 @@ from experiment_build import ExperimentBuilder
 from model_architectures import BasicNet
 import os 
 
-'''
-example command for running on terminal
-python ml_model/main.py --num_epochs 100 --experiment_name trained_models/testing
-'''
-
-
 def main():
+    
     args = get_args()  # get arguments from command line
     #rng = np.random.RandomState(seed=args.seed)  # set the seeds for the experiment
     #torch.manual_seed(seed=args.seed)  # sets pytorch's seed
@@ -32,36 +34,15 @@ def main():
     num_train = 10000
     batch_train = args.batch_size
     uterus_train_data = uterus(num_train)
-    uterus_train_data.add_noise()
     train_data_loader = uterus_train_data.return_dataloader(batch_train)
     
     num_val = 3000
     batch_val = args.batch_size_test
     uterus_val_data = uterus(num_val)
-    uterus_val_data.add_noise()
     val_data_loader = uterus_val_data.return_dataloader(batch_val)
+    
+    uterus_val_data.plot_both()
 
-    
 
-
-    
-    custom_conv_net = BasicNet()
-    
-    mri_experiment = ExperimentBuilder(network_model=custom_conv_net,
-                                        experiment_name=args.experiment_name,
-                                        num_epochs=args.num_epochs,
-                                        weight_decay_coefficient=args.weight_decay_coefficient,
-                                        train_data=train_data_loader, val_data=val_data_loader,
-                                        test_data=None)  # build an experiment object
-    
-    stat_path, model_path = mri_experiment.run_experiment()  # run experiment and return experiment metrics
-    print('\n stat_path: ', stat_path)
-    print('\n model_path: ', model_path)
-
-    
-    mri_experiment.loss_plot()
-    
-    mri_experiment.pk_dist()
-    
 if __name__ == '__main__':
     main()

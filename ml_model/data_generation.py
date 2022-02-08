@@ -11,13 +11,16 @@ import scipy.stats as st
 import torch
 import torch.utils.data as Data
 import os
+import matplotlib.pyplot as plt
 
 
 from tkmodel.TwoCUM_copy import TwoCUMfittingConc
 from tkmodel.TwoCUM_copy import TwoCUM
 
 class tissue():
-    
+    '''
+    Originally added because i wanted to add data generation for other tissue types
+    '''
     def __init__(self):
         pass
         
@@ -45,6 +48,30 @@ class uterus(tissue):
         super(uterus, self).__init__()
         
         self.num = num
+        self.x, self.y = self.generate_xy()
+        
+    def save_data(self, experiment_folder, name):
+        '''
+        Because the data is randomnly generated, sometime i need to save it and load it
+        '''
+        path = os.path.join(experiment_folder, 'data')
+        path_x = os.path.join(path, name + '_x')
+        path_y = os.path.join(path, name + '_y')
+        np.save(path_x self.x)
+        np.save(path_y self.y)
+        
+    def load_data(self, experiment_folder, name):
+        '''
+        Because the data is randomnly generated, sometime i need to save it and load it
+        THIS WILL OVERWRITE YOUR INITIAL CHOICE OF NUM
+        '''
+        path = os.path.join(experiment_folder, 'data')
+        path_x = os.path.join(path, name + '_x')
+        path_y = os.path.join(path, name + '_y')
+        self.x = np.load(path_x self.x)
+        self.y = np.load(path_y self.y)
+        self.num = self.x.shape[0]
+
         
     def E_distribution(self):
         p = 0.09392265193370165
@@ -100,6 +127,10 @@ class uterus(tissue):
         return true_dist
     
     def generate_xy(self):
+        '''
+        Inputs: nothing
+        Outputs: x with shape (n, 150) and y with shape (n, 3)
+        '''
         AIF = np.load('data/AIF.npy')
         data_size = AIF.shape[0]
         t = np.arange(0,366,2.45)
@@ -131,11 +162,51 @@ class uterus(tissue):
         
         return x,y
     
+    def add_noise(self):
+        '''
+        Input: x with shape (n, 150)
+        Output: x_noisy with shape (n, 150)
+        '''
+        std_mean = 0.015483295177018167
+        noise = np.random.normal(scale = 3.7*std_mean, size =self.x.shape)
+        x_noisy = np.zeros(self.x.shape)
+        for i in range(self.x.shape[0]):
+            curve_max = self.x[i].max()
+            x_noisy[i] = self.x[i] + curve_max * noise[i]
+        
+        self.x = x_noisy
+        
+    
+    def plot_data(self, j = 0):
+        
+        t = np.arange(0,366,2.45)
+        plt.scatter(t, self.x[j], label = 'Curve ' + str(j))   
+        plt.legend()
+        plt.xlabel('t')
+        plt.ylabel('concentration')
+        plt.show()
+    
+    def plot_both(self):
+        '''
+        plots both noisy and non-noisy versions
+        '''
+        print('Choose a curve between 0 and ', str(self.num))
+        j = int(input(': '))
+        t = np.arange(0,366,2.45)
+        plt.plot(t, self.x[j], label = 'Curve ' + str(j))   
+        plt.legend()
+        plt.xlabel('t')
+        plt.ylabel('concentration')
+        
+        self.add_noise()
+        plt.scatter(t, self.x[j], label = 'Noisy Curve ' + str(j))   
+        plt.show()        
+
+        
     def return_dataloader(self, batch_size):
         
-        x,y = self.generate_xy()
-        x = self.normalise(x)
-        dataloader = self.create_dataloader(x, y, batch_size)
+        norm_x = self.normalise(self.x)
+        dataloader = self.create_dataloader(norm_x, self.y, batch_size)
         
         return dataloader
         

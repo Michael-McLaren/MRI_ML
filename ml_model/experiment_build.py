@@ -130,6 +130,7 @@ class ExperimentBuilder(nn.Module):
         self.load_state_dict(state_dict=state['network']) #loads model using pytorch function
         return state, state['best_val_model_idx'], state['best_val_model_loss']
     
+
     def save_statistics(self, experiment_log_dir, filename, stats_dict, current_epoch, continue_from_mode=False):
         """
         Saves the statistics in stats dict into a csv file. Using the keys as the header entries and the values as the
@@ -211,7 +212,6 @@ class ExperimentBuilder(nn.Module):
                 full_val = np.concatenate((full_val, combined_values))
         
         df = pd.DataFrame(full_val, columns = ['E_pred','Fp_pred','vp_pred','E_true','Fp_true','vp_true'])   
-        print(df)
         
         file_name = os.path.join(self.experiment_logs, 'E_violin.png')
         sns.violinplot(data=df[['E_pred', 'E_true']])
@@ -249,6 +249,8 @@ class ExperimentBuilder(nn.Module):
         file_name = os.path.join(self.experiment_logs, 'vp_kde.png')
         plt.savefig(file_name)
         plt.clf()
+        
+    def show_example_curves(self):
 
     def run_experiment(self):
         
@@ -306,8 +308,8 @@ class ExperimentBuilder(nn.Module):
                 best_validation_model_idx=self.best_val_model_idx,
                 best_validation_model_loss=self.best_val_model_loss)
             
-        model_path = [self.experiment_saved_models]
-        stat_path = [self.experiment_logs, 'summary.csv'] #subject to change if save_stats changes
+        model_path = self.experiment_saved_models
+        folder_path = self.experiment_folder #subject to change if save_stats changes
         
         return stat_path, model_path
     
