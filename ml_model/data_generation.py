@@ -68,8 +68,8 @@ class uterus(tissue):
         path = os.path.join(experiment_folder, 'data')
         path_x = os.path.join(path, name + '_x')
         path_y = os.path.join(path, name + '_y')
-        self.x = np.load(path_x, self.x)
-        self.y = np.load(path_y, self.y)
+        self.x = np.load(path_x + '.npy')
+        self.y = np.load(path_y + '.npy')
         self.num = self.x.shape[0]
 
         

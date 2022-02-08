@@ -19,7 +19,7 @@ import seaborn as sns
 import pandas as pd
 
 from combined_loss import combined
-
+from tkmodel.TwoCUM_copy import TwoCUM
 
 class ExperimentBuilder(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data,
@@ -253,7 +253,34 @@ class ExperimentBuilder(nn.Module):
         file_name = os.path.join(self.experiment_logs, 'vp_kde.png')
         plt.savefig(file_name)
         plt.clf()
+    
+    def example_fit(self, x, y, x_norm):
+        '''
+        Input: x with shape (150), y with shape (3), normalised x with shape (150)
+        Normalised data is needed to show the original scatter data
+        '''
+        self.model.eval()
         
+        input_x = torch.tensor(x_norm)
+        input_x = input_x.unsqueeze(0)
+        input_x = input_x.float()
+        output_y = self.model.forward(input_x)
+        pred_y = output_y[0].detach().numpy()
+        
+        print(pred_y, y)
+        target_curve = TwoCUM(y, self.time, self.AIF, 0)
+        predicted_curve = TwoCUM(pred_y, self.time, self.AIF, 0)
+        
+        textstr = '     (True, Pred):\n E=({:.3f},{:.3f}) \n Fp=({:.3f},{:.3f})\n vp=({:.3f},{:.3f}) \n'.format(y[0], pred_y[0], y[1], pred_y[1], y[2], pred_y[2])
+        plt.plot(self.time, target_curve, label = 'NLS Prediction', color = 'red')
+        plt.plot(self.time, predicted_curve, label = 'Model Prediction', color = 'orange')
+        plt.scatter(self.time, x, label= 'Real data')
+        plt.legend()
+        plt.text(0.02, 0.5, textstr, fontsize=11, transform=plt.gcf().transFigure)
+        plt.subplots_adjust(left=0.30)
+        plt.show()
+        plt.clf()        
+
 
     def run_experiment(self):
         
