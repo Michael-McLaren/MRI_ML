@@ -23,7 +23,7 @@ from tkmodel.TwoCUM_copy import TwoCUM
 
 class ExperimentBuilder(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data,
-                 test_data, weight_decay_coefficient):
+                 test_data, weight_decay_coefficient, pk_weight, curve_weight):
         """
         Initializes an ExperimentBuilder object. Such an object takes care of running training and evaluation of a deep net
         on a given dataset. It also takes care of saving per epoch models and automatically inferring the best val model
@@ -75,12 +75,14 @@ class ExperimentBuilder(nn.Module):
         self.criterion = combined  # send the loss computation to the GPU
         self.AIF = torch.from_numpy(np.load("data/AIF.npy"))
         self.time = np.arange(0,366,2.45)
+        self.pk_weight = pk_weight
+        self.curve_weight = curve_weight
         
     def run_train_iter(self, x, y):
         self.train()
         self.optimizer.zero_grad()
         output = self.model.forward(x)
-        loss = self.criterion(output, y)
+        loss = self.criterion(output, y, pk_weight = self.pk_weight, curve_weight = self.curve_weight)
         loss.backward()
         self.optimizer.step()
            
@@ -96,7 +98,7 @@ class ExperimentBuilder(nn.Module):
         with torch.no_grad(): #removes gradient from torch vectors
                 self.eval() # sets the system to validation mode for dropout layers and such
                 output = self.model.forward(x)
-                loss = self.criterion(output, y)
+                loss = self.criterion(output, y, self.pk_weight, self.curve_weight)
         
         return loss
     
@@ -209,7 +211,6 @@ class ExperimentBuilder(nn.Module):
             if i == 0:
                 full_val = combined_values
             else:
-                print(full_val.shape, combined_values.shape)
                 full_val = np.concatenate((full_val, combined_values))
         
         df = pd.DataFrame(full_val, columns = ['E_pred','Fp_pred','vp_pred','E_true','Fp_true','vp_true'])   

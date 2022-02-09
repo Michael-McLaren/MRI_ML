@@ -52,7 +52,7 @@ def loss_fn_batch(outputs, targets):
     MSE = torch.sum((F_out - F_targets)**2)/F_out.shape[1]
     return MSE
 
-def combined(outputs, targets):
-    MSE_comb = loss_fn_batch(outputs, targets) + 50*torch.sum((outputs - targets)**2)
+def combined(outputs, targets, pk_weight = 50, curve_weight = 1):
+    MSE_comb = curve_weight * loss_fn_batch(outputs, targets) + pk_weight*torch.sum((outputs - targets)**2)
 
     return MSE_comb

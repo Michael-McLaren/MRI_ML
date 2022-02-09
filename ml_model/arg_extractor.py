@@ -22,6 +22,12 @@ def get_args():
     parser.add_argument('--weight_decay_coefficient', nargs="?", type=float, default=0.01,
                         help='Weight decay to use for Adam')
 
+    parser.add_argument('--pk_weight', nargs="?", type=float, default=50,
+                        help='Weight for MSE error of pk parameters')
+
+    parser.add_argument('--curve_weight', nargs="?", type=float, default=1,
+                        help='Weight for MSE error of the curve')
+
     args = parser.parse_args()
     print(args)
     return args

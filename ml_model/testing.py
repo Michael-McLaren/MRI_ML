@@ -33,13 +33,15 @@ def main():
     #    transforms.ToTensor(),
     #    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     #])
+    name = args.experiment_name.split('/')
+    name = name[-1]
     
     num_train = 5
     batch_train = args.batch_size
     uterus_train_data = uterus(num_train)
     
     #LOAD DATA
-    uterus_train_data.load_data('trained_models', 'train_data')
+    uterus_train_data.load_data('trained_models', name+'_train_data')
     train_data_loader = uterus_train_data.return_dataloader(batch_train, shuffle = False)
     
     num_val = 5
@@ -47,7 +49,7 @@ def main():
     uterus_val_data = uterus(num_val)
     
     #LOAD DATA
-    uterus_val_data.load_data('trained_models', 'val_data')
+    uterus_val_data.load_data('trained_models', name + '_val_data')
     val_data_loader = uterus_val_data.return_dataloader(batch_val, shuffle = False)
     
     custom_conv_net = BasicNet()
@@ -56,10 +58,17 @@ def main():
                                         experiment_name=args.experiment_name,
                                         num_epochs=args.num_epochs,
                                         weight_decay_coefficient=args.weight_decay_coefficient,
-                                        train_data=train_data_loader, val_data=val_data_loader,
+                                        pk_weight = args.pk_weight, 
+                                        curve_weight = args.curve_weight,
+                                        train_data=train_data_loader, 
+                                        val_data=val_data_loader,
                                         test_data=None)  # build an experiment object
-    model_path = '/afs/inf.ed.ac.uk/user/s17/s1740929/MRI_ML/trained_models/testing/saved_models'
-    mri_experiment.load_model(model_path, 'train_model', 5)
+    
+
+    
+    model_path = '/afs/inf.ed.ac.uk/user/s17/s1740929/MRI_ML/trained_models/'+name+'/saved_models'
+    mri_experiment.load_model(model_path, 'train_model', 49)
+    
     
     x = np.load('trained_models/data/test_x.npy')
     y = np.load('trained_models/data/test_y.npy')
@@ -75,6 +84,7 @@ def main():
     j = 2
     x_norm = uterus_train_data.normalise(x)
     mri_experiment.example_fit(x[j], y[j], x_norm[j])
+    
 
 if __name__ == '__main__':
     main()
