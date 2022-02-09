@@ -23,7 +23,7 @@ from tkmodel.TwoCUM_copy import TwoCUM
 
 class ExperimentBuilder(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data,
-                 test_data, weight_decay_coefficient, pk_weight, curve_weight):
+                 test_data, weight_decay_coefficient, pk_weight, curve_weight, lr):
         """
         Initializes an ExperimentBuilder object. Such an object takes care of running training and evaluation of a deep net
         on a given dataset. It also takes care of saving per epoch models and automatically inferring the best val model
@@ -54,7 +54,8 @@ class ExperimentBuilder(nn.Module):
         self.test_data = test_data
         
         self.optimizer = optim.AdamW(self.parameters(),
-                                    weight_decay=weight_decay_coefficient)
+                                    weight_decay=weight_decay_coefficient,
+                                    lr = lr)
         
         # Generate the directory names
         self.experiment_folder = os.path.abspath(experiment_name)

@@ -58,7 +58,8 @@ def main():
                                         experiment_name=args.experiment_name,
                                         num_epochs=args.num_epochs,
                                         weight_decay_coefficient=args.weight_decay_coefficient,
-                                        pk_weight = args.pk_weight, 
+                                        pk_weight = args.pk_weight,
+                                        lr = args.lr,
                                         curve_weight = args.curve_weight,
                                         train_data=train_data_loader, 
                                         val_data=val_data_loader,
@@ -73,7 +74,7 @@ def main():
     x = np.load('trained_models/data/test_x.npy')
     y = np.load('trained_models/data/test_y.npy')
     
-    j = 55
+    j = 59
     x_norm = uterus_train_data.normalise(x)
     mri_experiment.example_fit(x[j], y[j], x_norm[j])
     

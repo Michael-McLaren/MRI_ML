@@ -27,6 +27,9 @@ def get_args():
 
     parser.add_argument('--curve_weight', nargs="?", type=float, default=1,
                         help='Weight for MSE error of the curve')
+                        
+    parser.add_argument('--lr', nargs="?", type=float, default=0.001,
+                        help='Learning rate for Adam optimizer')
 
     args = parser.parse_args()
     print(args)

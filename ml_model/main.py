@@ -57,6 +57,7 @@ def main():
                                         weight_decay_coefficient=args.weight_decay_coefficient,
                                         pk_weight = args.pk_weight, 
                                         curve_weight = args.curve_weight,
+                                        lr = args.lr,
                                         train_data=train_data_loader, 
                                         val_data=val_data_loader,
                                         test_data=None)  # build an experiment object
