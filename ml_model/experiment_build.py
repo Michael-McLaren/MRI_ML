@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
+from data_generation import uterus
 from combined_loss import combined
 from tkmodel.TwoCUM_copy import TwoCUM
 
@@ -78,6 +79,26 @@ class ExperimentBuilder(nn.Module):
         self.time = np.arange(0,366,2.45)
         self.pk_weight = pk_weight
         self.curve_weight = curve_weight
+        
+    def create_data(self, batch_train, batch_val, num_train, num_val):
+        uterus_train_data = uterus(num_train)
+        uterus_train_data.add_noise()
+        #used for testing later
+        self.train_x = uterus_train_data.x
+        self.train_y = uterus_train_data.y
+        #setting the train data
+        self.train_data = uterus_train_data.return_dataloader(batch_train)
+        
+        
+        uterus_val_data = uterus(num_val)
+        uterus_val_data.add_noise()
+        #this is used for testing later
+        self.val_x = uterus_val_data.x
+        self.val_y = uterus_val_data.y
+        #what you actually want
+        self.val_data = uterus_val_data.return_dataloader(batch_val)
+        
+        #no need for test data as that should always be passed
         
     def run_train_iter(self, x, y):
         self.train()
@@ -342,8 +363,29 @@ class ExperimentBuilder(nn.Module):
             
         model_path = self.experiment_saved_models
         folder_path = self.experiment_folder #subject to change if save_stats changes
+            
         
         return folder_path, model_path
+    
+    def testing(self, epoch, j):
+        
+        self.load_model(self.experiment_saved_models, 'train_model', epoch)
+        
+        #train data example
+        x_norm = uterus.normalise(self.train_x)
+        self.example_fit(self.train_x[j], self.train_y[j], x_norm[j])
+        
+        #val data example
+        x_norm = uterus.normalise(self.val_x)
+        self.example_fit(self.val_x[j], self.val_y[j], x_norm[j])
+
+        #val data example
+        real_x = uterus.real_x
+        real_y = uterus.real_y
+        x_norm = uterus.normalise(real_x)
+        self.example_fit(real_x[j], real_y[j], x_norm[j]) 
+        
+        
     
             
             

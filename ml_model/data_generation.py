@@ -23,7 +23,8 @@ class tissue():
     '''
     def __init__(self):
         pass
-        
+    
+    @staticmethod
     def create_dataloader(self, x, y, batch_size, shuffle = True):
     
         x = torch.from_numpy(x).float()
@@ -35,7 +36,8 @@ class tissue():
         dataloader = Data.DataLoader(torch_dataset, batch_size=batch_size, shuffle=shuffle) 
         
         return dataloader
-
+    
+    @staticmethod
     def normalise(self, x):
         x_trans = ( (x - x.mean() )/ x.std())
         return x_trans
@@ -44,11 +46,15 @@ class tissue():
 #inherits from tissue, specifically for uterus
 class uterus(tissue):
     
+    real_x = np.load('trained_models/data/test_x.npy')
+    real_y = np.load('trained_models/data/test_y.npy')
+
     def __init__(self, num):
         super(uterus, self).__init__()
         
         self.num = num
         self.x, self.y = self.generate_xy()
+
         
     def save_data(self, experiment_folder, name):
         '''

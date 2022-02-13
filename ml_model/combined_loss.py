@@ -11,12 +11,12 @@ import numpy as np
 from tkmodel.TwoCUM_copy import TwoCUMfittingConc
 from tkmodel.TwoCUM_copy import TwoCUM
 
-def TwoCUM_batch(E, Fp ,vp, AIF1 , t): 
+def TwoCUM_batch(E, Fp ,vp, AIF1 , t, ep = 1e-8): 
     batch_size = E.shape[0]
     
-    Tp=(vp/Fp)*(1-E)
+    Tp=(vp/(Fp+ep))*(1-E)
     #Calculate the IRF
-    exptTp= torch.exp(-1*t[:,None]/Tp[None,:]) #adding dummy variables so it divides properly
+    exptTp= torch.exp(-1*t[:,None]/(Tp[None,:]+ep)) #adding dummy variables so it divides properly
 
     R=exptTp*(1-E) + E
 

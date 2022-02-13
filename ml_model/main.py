@@ -12,7 +12,7 @@ import os
 
 '''
 example command for running on terminal
-python ml_model/main.py --num_epochs 100 --experiment_name trained_models/testing
+python ml_model/main.py --num_epochs 100 --experiment_name trained_models/real
 '''
 
 
@@ -30,7 +30,7 @@ def main():
     #])
     name = args.experiment_name.split('/')
     name = name[-1]
-    
+    '''
     num_train = 100000
     batch_train = args.batch_size
     uterus_train_data = uterus(num_train)
@@ -44,9 +44,28 @@ def main():
     uterus_val_data.add_noise()
     uterus_val_data.save_data('trained_models', name + '_val_data')
     val_data_loader = uterus_val_data.return_dataloader(batch_val)
+    '''
+    batch_train = args.batch_size
+    batch_val = args.batch_size_test
 
+    num_train = 1
+    uterus_train_data = uterus(num_train)
+    real_x = uterus_train_data.real_x
+    real_y = uterus_train_data.real_y
+
+    train_ind = int(real_x.shape[0]*0.6)
+    val_ind = int(real_x.shape[0]*0.8)
     
-
+    train_x = real_x[:train_ind]
+    train_x = uterus_train_data.normalise(train_x)
+    train_y = real_y[:train_ind]
+    
+    val_x = real_x[train_ind:val_ind]
+    val_x = uterus_train_data.normalise(val_x)
+    val_y = real_y[train_ind:val_ind]
+    
+    train_data_loader = uterus_train_data.create_dataloader(train_x, train_y, batch_train)
+    val_data_loader = uterus_train_data.create_dataloader(val_x, val_y, batch_val)
 
     
     custom_conv_net = BasicNet()
