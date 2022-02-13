@@ -75,7 +75,7 @@ class ExperimentBuilder(nn.Module):
         
         self.num_epochs = num_epochs
         self.criterion = combined  # send the loss computation to the GPU
-        self.criterion_curve = MSE_curve
+        self.curve_criterion= MSE_curve
         self.pk_criterion = MSE_pk
         self.AIF = torch.from_numpy(np.load("data/AIF.npy"))
         self.time = np.arange(0,366,2.45)
@@ -222,10 +222,7 @@ class ExperimentBuilder(nn.Module):
     def loss_plot(self):
         
         stats = self.load_statistics(self.experiment_logs, 'summary.csv')
-        i = 0
         for key, value in stats.items():
-            if i % 2 == 0:
-                plt.clf()
             plt.plot(value, label = key)
             
         file_name = os.path.join(self.experiment_logs, 'loss')
@@ -402,7 +399,7 @@ class ExperimentBuilder(nn.Module):
         x_norm = uterus.normalise(self.val_x)
         self.example_fit(self.val_x[j], self.val_y[j], x_norm[j])
 
-        #val data example
+        #test data example
         real_x = uterus.real_x
         real_y = uterus.real_y
         x_norm = uterus.normalise(real_x)

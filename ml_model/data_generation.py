@@ -25,7 +25,7 @@ class tissue():
         pass
     
     @staticmethod
-    def create_dataloader(self, x, y, batch_size, shuffle = True):
+    def create_dataloader(x, y, batch_size, shuffle = True):
     
         x = torch.from_numpy(x).float()
         y = torch.from_numpy(y).float()
@@ -38,7 +38,7 @@ class tissue():
         return dataloader
     
     @staticmethod
-    def normalise(self, x):
+    def normalise(x):
         x_trans = ( (x - x.mean() )/ x.std())
         return x_trans
 
@@ -217,8 +217,8 @@ class uterus(tissue):
         
     def return_dataloader(self, batch_size, shuffle = True):
         
-        norm_x = self.normalise(self.x)
-        dataloader = self.create_dataloader(norm_x, self.y, batch_size, shuffle)
+        norm_x = uterus.normalise(self.x)
+        dataloader = uterus.create_dataloader(norm_x, self.y, batch_size, shuffle)
         
         return dataloader
         

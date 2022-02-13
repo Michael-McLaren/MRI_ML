@@ -62,8 +62,8 @@ def MSE_curve(outputs, targets, curve_weight):
 
 def combined(outputs, targets, pk_weight = 50, curve_weight = 1):
     
-    MSE_pk = MSE_pk(outputs, targets, pk_weight)
-    MSE_curve = MSE_curve(outputs, targets, curve_weight)
-    MSE_comb = MSE_curve + MSE_pk
+    pk = MSE_pk(outputs, targets, pk_weight)
+    curve = MSE_curve(outputs, targets, curve_weight)
+    MSE_comb = pk + curve
 
     return MSE_comb
