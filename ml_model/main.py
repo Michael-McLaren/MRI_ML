@@ -90,5 +90,7 @@ def main():
     
     mri_experiment.pk_dist()
     
+    mri_experiment.testing(epoch=99, j=10)
+    
 if __name__ == '__main__':
     main()

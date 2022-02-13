@@ -19,7 +19,7 @@ import seaborn as sns
 import pandas as pd
 
 from data_generation import uterus
-from combined_loss import combined
+from combined_loss import combined, MSE_pk, MSE_curve
 from tkmodel.TwoCUM_copy import TwoCUM
 
 class ExperimentBuilder(nn.Module):
@@ -75,6 +75,8 @@ class ExperimentBuilder(nn.Module):
         
         self.num_epochs = num_epochs
         self.criterion = combined  # send the loss computation to the GPU
+        self.criterion_curve = MSE_curve
+        self.pk_criterion = MSE_pk
         self.AIF = torch.from_numpy(np.load("data/AIF.npy"))
         self.time = np.arange(0,366,2.45)
         self.pk_weight = pk_weight
@@ -105,10 +107,15 @@ class ExperimentBuilder(nn.Module):
         self.optimizer.zero_grad()
         output = self.model.forward(x)
         loss = self.criterion(output, y, pk_weight = self.pk_weight, curve_weight = self.curve_weight)
+        
+        #solely for plotting
+        loss_pk = self.pk_criterion(output, y, pk_weight = self.pk_weight)
+        loss_curve = self.curve_criterion(output, y, curve_weight = self.curve_weight)
+        
         loss.backward()
         self.optimizer.step()
            
-        return loss
+        return loss, loss_pk, loss_curve
     
     def run_evaluation_iter(self, x, y):
         """
@@ -121,8 +128,12 @@ class ExperimentBuilder(nn.Module):
                 self.eval() # sets the system to validation mode for dropout layers and such
                 output = self.model.forward(x)
                 loss = self.criterion(output, y, self.pk_weight, self.curve_weight)
+                
+                #solely for plotting
+                loss_pk = self.pk_criterion(output, y, pk_weight = self.pk_weight)
+                loss_curve = self.curve_criterion(output, y, curve_weight = self.curve_weight)
         
-        return loss
+        return loss, loss_pk, loss_curve
     
     def save_model(self, model_save_dir, model_save_name, model_idx, best_validation_model_idx,
                    best_validation_model_loss):
@@ -211,7 +222,10 @@ class ExperimentBuilder(nn.Module):
     def loss_plot(self):
         
         stats = self.load_statistics(self.experiment_logs, 'summary.csv')
+        i = 0
         for key, value in stats.items():
+            if i % 2 == 0:
+                plt.clf()
             plt.plot(value, label = key)
             
         file_name = os.path.join(self.experiment_logs, 'loss')
@@ -308,18 +322,25 @@ class ExperimentBuilder(nn.Module):
     def run_experiment(self):
         
         #this is for the mean values
-        total_losses = {"train_loss": [], "val_loss": []}  # initialize a dict to keep the per-epoch metrics
+        total_losses = {"train_loss": [], "val_loss": [], 
+                        "pk_train_loss": [], "pk_val_loss": [], 
+                        "curve_train_loss": [], "curve_val_loss": []}  # initialize a dict to keep the per-epoch metrics
         
         for epoch_idx in range(self.num_epochs):
             epoch_start_time = time.time()
-            current_epoch_losses = {"train_loss": [], "val_loss": []} #mini batch train and val loss
+            current_epoch_losses = {"train_loss": [], "val_loss": [],  
+                                    "pk_train_loss": [], "pk_val_loss": [],
+                                    "curve_train_loss": [], "curve_val_loss": []} #mini batch train and val loss
             self.current_epoch = epoch_idx
             
             #training run through
             with tqdm.tqdm(total=len(self.train_data)) as pbar_train:  # create a progress bar for training
                 for idx, (x, y) in enumerate(self.train_data):  # get data batches
-                    loss = self.run_train_iter(x=x, y=y)  # take a training iter step
+                    loss, loss_pk, loss_curve = self.run_train_iter(x=x, y=y)  # take a training iter step
                     current_epoch_losses["train_loss"].append(loss.detach().numpy())  # add current iter loss to the train loss list
+                    current_epoch_losses["pk_train_loss"].append(loss_pk.detach().numpy())  # add current iter loss to the train loss list
+                    current_epoch_losses["curve_train_loss"].append(loss_curve.detach().numpy())  # add current iter loss to the train loss list
+
                     #descriptive stuff to make it pretty
                     pbar_train.update(1)
                     pbar_train.set_description("loss: {:.4f}".format(loss))
@@ -327,8 +348,10 @@ class ExperimentBuilder(nn.Module):
             #validation run through
             with tqdm.tqdm(total=len(self.val_data)) as pbar_val:  # create a progress bar for validation
                 for x, y in self.val_data:  # get data batches
-                    loss = self.run_evaluation_iter(x=x, y=y)  # run a validation iter
+                    loss, loss_pk, loss_curve = self.run_evaluation_iter(x=x, y=y)  # run a validation iter
                     current_epoch_losses["val_loss"].append(loss.detach().numpy())  # add current iter loss to val loss list.
+                    current_epoch_losses["pk_val_loss"].append(loss.detach().numpy())  # add current iter loss to val loss list.
+                    current_epoch_losses["curve_val_loss"].append(loss.detach().numpy())  # add current iter loss to val loss list.
                                         
                     #descriptive stuff to make it pretty
                     pbar_val.update(1)  # add 1 step to the progress bar
