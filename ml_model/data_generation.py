@@ -54,7 +54,13 @@ class uterus(tissue):
         '''
         Because the data is randomnly generated, sometime i need to save it and load it
         '''
+
         path = os.path.join(experiment_folder, 'data')
+        path = os.path.join(path, name)
+        
+        if not os.path.exists(path):  # If experiment directory does not exist
+            os.mkdir(path)  # create the experiment directory
+        
         path_x = os.path.join(path, name + '_x')
         path_y = os.path.join(path, name + '_y')
         np.save(path_x, self.x)
