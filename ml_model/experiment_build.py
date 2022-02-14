@@ -222,7 +222,7 @@ class ExperimentBuilder(nn.Module):
     def loss_plot(self):
         
         stats = self.load_statistics(self.experiment_logs, 'summary.csv')
-        for key, value in stats.items():
+        for key, value in list(stats.items())[:2]:
             plt.plot(value, label = key)
             
         file_name = os.path.join(self.experiment_logs, 'loss')
@@ -230,6 +230,28 @@ class ExperimentBuilder(nn.Module):
         plt.legend()
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
+        plt.savefig(file_name)
+        plt.clf()
+        
+        for key, value in list(stats.items())[2:4]:
+            plt.plot(value, label = key)
+            
+        file_name = os.path.join(self.experiment_logs, 'pk_loss')
+            
+        plt.legend()
+        plt.xlabel("Epoch")
+        plt.ylabel("PK Loss")
+        plt.savefig(file_name)
+        plt.clf()
+        
+        for key, value in list(stats.items())[4:6]:
+            plt.plot(value, label = key)
+            
+        file_name = os.path.join(self.experiment_logs, 'curve_loss')
+            
+        plt.legend()
+        plt.xlabel("Epoch")
+        plt.ylabel("Curve Loss")
         plt.savefig(file_name)
         plt.clf()
         
@@ -387,23 +409,32 @@ class ExperimentBuilder(nn.Module):
         
         return folder_path, model_path
     
-    def testing(self, epoch, j):
+    def testing(self, epoch):
         
         self.load_model(self.experiment_saved_models, 'train_model', epoch)
         
         #train data example
-        x_norm = uterus.normalise(self.train_x)
-        self.example_fit(self.train_x[j], self.train_y[j], x_norm[j])
-        
-        #val data example
-        x_norm = uterus.normalise(self.val_x)
-        self.example_fit(self.val_x[j], self.val_y[j], x_norm[j])
-
-        #test data example
-        real_x = uterus.real_x
-        real_y = uterus.real_y
-        x_norm = uterus.normalise(real_x)
-        self.example_fit(real_x[j], real_y[j], x_norm[j]) 
+        while True:
+            stop = input('Type break to stop the loop: ')
+            
+            if stop == 'break':
+                break
+            
+            j = int(input('Input j: '))
+            x_norm = uterus.normalise(self.train_x)
+            self.example_fit(self.train_x[j], self.train_y[j], x_norm[j])
+            
+            #val data example
+            x_norm = uterus.normalise(self.val_x)
+            self.example_fit(self.val_x[j], self.val_y[j], x_norm[j])
+    
+            #test data example
+            real_x = uterus.real_x
+            real_y = uterus.real_y
+            x_norm = uterus.normalise(real_x)
+            self.example_fit(real_x[j], real_y[j], x_norm[j]) 
+            
+            
         
         
     
