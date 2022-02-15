@@ -77,9 +77,9 @@ def main():
     
     mri_experiment.create_data(batch_train, batch_val, num_train, num_val)
     
-    folder_path, model_path = mri_experiment.run_experiment()  # run experiment and return experiment metrics
-    print('\n stat_path: ', folder_path)
-    print('\n model_path: ', model_path)
+    best_val_model_loss, best_val_model_idx = mri_experiment.run_experiment()  # run experiment and return experiment metrics
+    print('\n best val model loss: ', best_val_model_loss)
+    print('\n best val model idx: ', best_val_model_idx)
 
     
     mri_experiment.loss_plot()
@@ -87,8 +87,7 @@ def main():
     mri_experiment.pk_dist()
     
     
-    in_epoch = int(input('Input epoch 0-99: '))
-    mri_experiment.testing(epoch=in_epoch)
+    mri_experiment.testing(epoch=best_val_model_idx)
     
 if __name__ == '__main__':
     main()

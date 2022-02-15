@@ -63,6 +63,7 @@ class EarlyStopping():
             self.best_loss = val_loss
         elif self.best_loss - val_loss > self.min_delta:
             self.best_loss = val_loss
+            print(f"INFO: Reset Counter. New Best Loss: {self.best_loss}")
             # reset counter if validation loss improves
             self.counter = 0
         elif self.best_loss - val_loss < self.min_delta:

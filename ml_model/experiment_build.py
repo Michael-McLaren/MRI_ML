@@ -25,7 +25,7 @@ from tkmodel.TwoCUM_copy import TwoCUM
 
 class ExperimentBuilder(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data,
-                 test_data, weight_decay_coefficient, pk_weight, curve_weight, lr):
+                 test_data, weight_decay_coefficient, pk_weight, curve_weight, lr, save = 1):
         """
         Initializes an ExperimentBuilder object. Such an object takes care of running training and evaluation of a deep net
         on a given dataset. It also takes care of saving per epoch models and automatically inferring the best val model
@@ -50,14 +50,19 @@ class ExperimentBuilder(nn.Module):
         self.starting_epoch = 0
 
         # read more about using moduledict
-        # self.model.reset_parameters()  # re-initialize network parameters
+        #self.model.reset_parameters()  # re-initialize network parameters
         self.train_data = train_data 
         self.val_data = val_data
         self.test_data = test_data
         
+        self.save = save
+        
         self.optimizer = optim.AdamW(self.parameters(),
                                     weight_decay=weight_decay_coefficient,
                                     lr = lr)
+        
+        self.lr_scheduler = LRScheduler(self.optimizer)
+        self.early_stopping = EarlyStopping(patience = 10)
         
         # Generate the directory names
         self.experiment_folder = os.path.abspath(experiment_name)
@@ -70,9 +75,9 @@ class ExperimentBuilder(nn.Module):
             os.mkdir(self.experiment_saved_models)  # create the experiment saved models directory
 
         
-        # Set best models to be at 0 since we are just starting
+        # Set best models to be at 1000 since we are just starting
         self.best_val_model_idx = 0
-        self.best_val_model_loss = 0.
+        self.best_val_model_loss = 5000
         
         self.num_epochs = num_epochs
         self.criterion = combined  # send the loss computation to the GPU
@@ -223,6 +228,8 @@ class ExperimentBuilder(nn.Module):
     def loss_plot(self):
         
         stats = self.load_statistics(self.experiment_logs, 'summary.csv')
+        
+        #normal loss plot
         for key, value in list(stats.items())[:2]:
             plt.plot(value, label = key)
             
@@ -234,6 +241,19 @@ class ExperimentBuilder(nn.Module):
         plt.savefig(file_name)
         plt.clf()
         
+        #zoomed normal loss plot
+        for key, value in list(stats.items())[:2]:
+            plt.plot(value[20:], label = key)
+            
+        file_name = os.path.join(self.experiment_logs, 'zoomed_loss')
+            
+        plt.legend()
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.savefig(file_name)
+        plt.clf()
+        
+        #pk loss plot
         for key, value in list(stats.items())[2:4]:
             plt.plot(value, label = key)
             
@@ -245,6 +265,7 @@ class ExperimentBuilder(nn.Module):
         plt.savefig(file_name)
         plt.clf()
         
+        #curve loss plot
         for key, value in list(stats.items())[4:6]:
             plt.plot(value, label = key)
             
@@ -270,21 +291,6 @@ class ExperimentBuilder(nn.Module):
                 full_val = np.concatenate((full_val, combined_values))
         
         df = pd.DataFrame(full_val, columns = ['E_pred','Fp_pred','vp_pred','E_true','Fp_true','vp_true'])   
-        
-        file_name = os.path.join(self.experiment_logs, 'E_violin.png')
-        sns.violinplot(data=df[['E_pred', 'E_true']])
-        plt.savefig(file_name)
-        plt.clf()
-        
-        file_name = os.path.join(self.experiment_logs, 'Fp_violin.png')
-        sns.violinplot(data=df[['Fp_pred', 'Fp_true']])
-        plt.savefig(file_name)
-        plt.clf()
-        
-        file_name = os.path.join(self.experiment_logs, 'vp_violin.png')
-        sns.violinplot(data=df[['vp_pred', 'vp_true']])
-        plt.savefig(file_name)
-        plt.clf()
         
 
         fig, ax = plt.subplots()
@@ -363,7 +369,7 @@ class ExperimentBuilder(nn.Module):
 
                     #descriptive stuff to make it pretty
                     pbar_train.update(1)
-                    pbar_train.set_description("loss: {:.4f}".format(loss))
+                    pbar_train.set_description("batch loss: {:.4f}".format(loss))
             
             #validation run through
             with tqdm.tqdm(total=len(self.val_data)) as pbar_val:  # create a progress bar for validation
@@ -371,18 +377,33 @@ class ExperimentBuilder(nn.Module):
                     loss, loss_pk, loss_curve = self.run_evaluation_iter(x=x, y=y)  # run a validation iter
                     current_epoch_losses["val_loss"].append(loss.detach().numpy())  # add current iter loss to val loss list.
                     current_epoch_losses["pk_val_loss"].append(loss_pk.detach().numpy())  # add current iter loss to val loss list.
-                     current_epoch_losses["curve_val_loss"].append(loss_curve.detach().numpy())  # add current iter loss to val loss list.
+                    current_epoch_losses["curve_val_loss"].append(loss_curve.detach().numpy())  # add current iter loss to val loss list.
                                         
                     #descriptive stuff to make it pretty
                     pbar_val.update(1)  # add 1 step to the progress bar
-                    pbar_val.set_description("loss: {:.4f}".format(loss))
+                    pbar_val.set_description("batch loss: {:.4f}".format(loss))
                     
             #if it does better on the val data then save it
             val_mean_loss = np.mean(current_epoch_losses['val_loss'])
+            
+            #update the learning rate
+            self.lr_scheduler(val_mean_loss)
+            
+                
+            
             if val_mean_loss < self.best_val_model_loss:  # save the best val loss
                 self.best_val_model_loss = val_mean_loss  # set the best val model loss to be current epoch's val accuracy
                 self.best_val_model_idx = epoch_idx  # set the experiment-wise best val idx to be the current epoch's idx
-
+                
+                
+                
+                if self.save == 1:
+                    self.save_model(model_save_dir=self.experiment_saved_models,
+                # save model and best val idx and best val acc, using the model dir, model name and model idx
+                        model_save_name="train_model", model_idx=epoch_idx,
+                        best_validation_model_idx=self.best_val_model_idx,
+                        best_validation_model_loss=self.best_val_model_loss)
+                
             for key, value in current_epoch_losses.items():
                 total_losses[key].append(np.mean(value))  # get mean of all metrics of current epoch metrics dict, to get them ready for storage and output on the terminal.
             
@@ -396,19 +417,15 @@ class ExperimentBuilder(nn.Module):
             out_string = "_".join(["{}_{:.4f}".format(key, np.mean(value)) for key, value in current_epoch_losses.items()])
             epoch_elapsed_time = time.time() - epoch_start_time  # calculate time taken for epoch
             epoch_elapsed_time = "{:.4f}".format(epoch_elapsed_time)
-            print("Epoch {}:".format(epoch_idx), out_string, "epoch time", epoch_elapsed_time, "seconds")
+            print("\nEpoch {}:".format(epoch_idx), out_string, "epoch time", epoch_elapsed_time, "seconds")
             
-            self.save_model(model_save_dir=self.experiment_saved_models,
-            # save model and best val idx and best val acc, using the model dir, model name and model idx
-                model_save_name="train_model", model_idx=epoch_idx,
-                best_validation_model_idx=self.best_val_model_idx,
-                best_validation_model_loss=self.best_val_model_loss)
-            
-        model_path = self.experiment_saved_models
-        folder_path = self.experiment_folder #subject to change if save_stats changes
-            
+            #break if the condition for earlystopping returns True
+            self.early_stopping(val_mean_loss)
+            if self.early_stopping.early_stop:
+                break
         
-        return folder_path, model_path
+        
+        return self.best_val_model_loss, self.best_val_model_idx
     
     def testing(self, epoch):
         
