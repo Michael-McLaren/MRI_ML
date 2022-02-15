@@ -12,7 +12,7 @@ import os
 
 '''
 example command for running on terminal
-ython ml_model/main.py --num_epochs 100 --experiment_name trained_models/testing
+ython ml_model/main.py --num_epochs 100 --experiment_name trained_models/curve
 '''
 
 
@@ -86,7 +86,9 @@ def main():
     
     mri_experiment.pk_dist()
     
-    mri_experiment.testing(epoch=99, j=10)
+    
+    in_epoch = int(input('Input epoch 0-99: '))
+    mri_experiment.testing(epoch=in_epoch)
     
 if __name__ == '__main__':
     main()

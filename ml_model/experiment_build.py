@@ -20,6 +20,7 @@ import pandas as pd
 
 from data_generation import uterus
 from combined_loss import combined, MSE_pk, MSE_curve
+from utils import LRScheduler, EarlyStopping
 from tkmodel.TwoCUM_copy import TwoCUM
 
 class ExperimentBuilder(nn.Module):
@@ -369,8 +370,8 @@ class ExperimentBuilder(nn.Module):
                 for x, y in self.val_data:  # get data batches
                     loss, loss_pk, loss_curve = self.run_evaluation_iter(x=x, y=y)  # run a validation iter
                     current_epoch_losses["val_loss"].append(loss.detach().numpy())  # add current iter loss to val loss list.
-                    current_epoch_losses["pk_val_loss"].append(loss.detach().numpy())  # add current iter loss to val loss list.
-                    current_epoch_losses["curve_val_loss"].append(loss.detach().numpy())  # add current iter loss to val loss list.
+                    current_epoch_losses["pk_val_loss"].append(loss_pk.detach().numpy())  # add current iter loss to val loss list.
+                     current_epoch_losses["curve_val_loss"].append(loss_curve.detach().numpy())  # add current iter loss to val loss list.
                                         
                     #descriptive stuff to make it pretty
                     pbar_val.update(1)  # add 1 step to the progress bar
