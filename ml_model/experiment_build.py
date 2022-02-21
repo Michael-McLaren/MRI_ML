@@ -273,6 +273,7 @@ class ExperimentBuilder(nn.Module):
             
             combined_values = np.concatenate((prediction_val, val_y), axis = 1)
             
+            #loop through and combine all the batches into one whole
             if i == 0:
                 full_val = combined_values
             else:
@@ -420,28 +421,21 @@ class ExperimentBuilder(nn.Module):
         self.load_model(self.experiment_saved_models, 'train_model', epoch)
         
         #train data example
-        while True:
-            stop = input('Type break to stop the loop: ')
+        for i, (test_x, test_y) in enumerate(self.test_data):
+            prediction_test = self.model.forward(test_x)
             
-            if stop == 'break':
-                break
+            prediction_test = prediction_test.detach().numpy()
+            test_y = test_y.detach().numpy()
             
-            j = int(input('Input j: '))
+            combined_values = np.concatenate((prediction_test, test_y), axis = 1)
             
-            if test == 0:
-                
-                x_norm = uterus.normalise(self.train_x)
-                self.example_fit(self.train_x[j], self.train_y[j], x_norm[j])
-                
-                #val data example
-                x_norm = uterus.normalise(self.val_x)
-                self.example_fit(self.val_x[j], self.val_y[j], x_norm[j])
-    
-            #test data example
-            real_x = uterus.real_x
-            real_y = uterus.real_y
-            x_norm = uterus.normalise(real_x)
-            self.example_fit(real_x[j], real_y[j], x_norm[j]) 
+            #loop through and combine all the batches into one whole
+            if i == 0:
+                full_test = combined_values
+            else:
+                full_test = np.concatenate((full_test, combined_values))
+        
+        full_test = self.scaler.inverse_transform(full_test)
             
             
         

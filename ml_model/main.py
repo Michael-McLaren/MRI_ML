@@ -76,7 +76,8 @@ def main():
                                         lr = args.lr,
                                         train_data=train, 
                                         val_data=val,
-                                        test_data=test)  # build an experiment object
+                                        test_data=test,
+                                        scaler = scaler)  # build an experiment object
     
 
     
