@@ -28,15 +28,10 @@ def main():
     #    transforms.ToTensor(),
     #    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     #])
-    name = args.experiment_name.split('/')
-    name = name[-1]
-    
-    num_train = 100000
-    batch_train = args.batch_size
 
     
-    num_val = 30000
-    batch_val = args.batch_size_test
+
+
 
     '''
     batch_train = args.batch_size
@@ -61,6 +56,14 @@ def main():
     train_data_loader = uterus_train_data.create_dataloader(train_x, train_y, batch_train)
     val_data_loader = uterus_train_data.create_dataloader(val_x, val_y, batch_val)
     '''
+    batch_train = args.batch_size
+
+    batch_val = args.batch_size_test
+    
+    num = 100000
+    
+    uterus_data = uterus(num)
+    train, val, test, scaler = uterus_data.create_data(batch_train, batch_val, shuffle = True)
     
     custom_conv_net = BasicNet()
     
@@ -71,11 +74,11 @@ def main():
                                         pk_weight = args.pk_weight, 
                                         curve_weight = args.curve_weight,
                                         lr = args.lr,
-                                        train_data=None, 
-                                        val_data=None,
-                                        test_data=None)  # build an experiment object
+                                        train_data=train, 
+                                        val_data=val,
+                                        test_data=test)  # build an experiment object
     
-    mri_experiment.create_data(batch_train, batch_val, num_train, num_val)
+
     
     best_val_model_loss, best_val_model_idx = mri_experiment.run_experiment()  # run experiment and return experiment metrics
     print('\n best val model loss: ', best_val_model_loss)

@@ -18,6 +18,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+
 from data_generation import uterus
 from combined_loss import combined, MSE_pk, MSE_curve
 from utils import LRScheduler, EarlyStopping
@@ -25,7 +28,7 @@ from tkmodel.TwoCUM_copy import TwoCUM
 
 class ExperimentBuilder(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data,
-                 test_data, weight_decay_coefficient, pk_weight, curve_weight, lr, save = 1):
+                 test_data, scaler, weight_decay_coefficient, pk_weight, curve_weight, lr, save = 1):
         """
         Initializes an ExperimentBuilder object. Such an object takes care of running training and evaluation of a deep net
         on a given dataset. It also takes care of saving per epoch models and automatically inferring the best val model
@@ -33,7 +36,7 @@ class ExperimentBuilder(nn.Module):
         :param network_model: A pytorch nn.Module which implements a network architecture.
         :param experiment_name: The name of the experiment. This is used mainly for keeping track of the experiment and creating and directory structure that will be used to save logs, model parameters and other.
         :param num_epochs: Total number of epochs to run the experiment
-        :param train_data: An object of the DataProvider type. Contains the training set.
+        :param train_data: numpy array
         :param val_data: An object of the DataProvider type. Contains the val set.
         :param test_data: An object of the DataProvider type. Contains the test set.
         :param weight_decay_coefficient: A float indicating the weight decay to use with the adam optimizer.
@@ -53,7 +56,10 @@ class ExperimentBuilder(nn.Module):
         #self.model.reset_parameters()  # re-initialize network parameters
         self.train_data = train_data 
         self.val_data = val_data
-        self.test_data = test_data
+        self.test_data = test_add_module
+        
+        #used for inverse transformations
+        self.scaler = scaler
         
         self.save = save
         
@@ -88,25 +94,7 @@ class ExperimentBuilder(nn.Module):
         self.pk_weight = pk_weight
         self.curve_weight = curve_weight
         
-    def create_data(self, batch_train, batch_val, num_train, num_val):
-        uterus_train_data = uterus(num_train)
-        uterus_train_data.add_noise()
-        #used for testing later
-        self.train_x = uterus_train_data.x
-        self.train_y = uterus_train_data.y
-        #setting the train data
-        self.train_data = uterus_train_data.return_dataloader(batch_train)
-        
-        
-        uterus_val_data = uterus(num_val)
-        uterus_val_data.add_noise()
-        #this is used for testing later
-        self.val_x = uterus_val_data.x
-        self.val_y = uterus_val_data.y
-        #what you actually want
-        self.val_data = uterus_val_data.return_dataloader(batch_val)
-        
-        #no need for test data as that should always be passed
+   
         
     def run_train_iter(self, x, y):
         self.train()
@@ -427,7 +415,7 @@ class ExperimentBuilder(nn.Module):
         
         return self.best_val_model_loss, self.best_val_model_idx
     
-    def testing(self, epoch):
+    def testing(self, epoch, test = 0):
         
         self.load_model(self.experiment_saved_models, 'train_model', epoch)
         
@@ -439,12 +427,15 @@ class ExperimentBuilder(nn.Module):
                 break
             
             j = int(input('Input j: '))
-            x_norm = uterus.normalise(self.train_x)
-            self.example_fit(self.train_x[j], self.train_y[j], x_norm[j])
             
-            #val data example
-            x_norm = uterus.normalise(self.val_x)
-            self.example_fit(self.val_x[j], self.val_y[j], x_norm[j])
+            if test == 0:
+                
+                x_norm = uterus.normalise(self.train_x)
+                self.example_fit(self.train_x[j], self.train_y[j], x_norm[j])
+                
+                #val data example
+                x_norm = uterus.normalise(self.val_x)
+                self.example_fit(self.val_x[j], self.val_y[j], x_norm[j])
     
             #test data example
             real_x = uterus.real_x

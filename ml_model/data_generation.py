@@ -13,6 +13,8 @@ import torch.utils.data as Data
 import os
 import matplotlib.pyplot as plt
 
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
 
 from tkmodel.TwoCUM_copy import TwoCUMfittingConc
 from tkmodel.TwoCUM_copy import TwoCUM
@@ -46,8 +48,8 @@ class tissue():
 #inherits from tissue, specifically for uterus
 class uterus(tissue):
     
-    real_x = np.load('trained_models/data/test_x.npy')
-    real_y = np.load('trained_models/data/test_y.npy')
+    real_x = np.load('trained_models/data/real_x_cleaned.npy')
+    real_y = np.load('trained_models/data/real_y_cleaned.npy')
 
     def __init__(self, num):
         super(uterus, self).__init__()
@@ -221,6 +223,44 @@ class uterus(tissue):
         dataloader = uterus.create_dataloader(norm_x, self.y, batch_size, shuffle)
         
         return dataloader
+    
+    def create_data(self, batch_train, batch_test, shuffle):
+        '''
+        Needs to output 3 shuffled standardised dataloaders
+        '''
+        scaler = MinMaxScaler()
+        
+        real_x = uterus.real_x
+        real_y = uterus.real_y
+        
+        #remove the test set
+        X_real, X_test, y_real, y_test = train_test_split(real_x, real_y, test_size = 0.2 ,shuffle = False)
+        
+        self.add_noise()   
+        
+        X  = np.concatenate((X_real, self.x), axis = 0)
+        y  = np.concatenate((y_real, self.y), axis = 0)
+        
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size = 0.2 ,shuffle = False)
+        
+        scaler.fit(X_train)
+        
+        X_train = scaler.transform(X_train)
+        X_val = scaler.transform(X_val)
+        X_test = scaler.transform(X_test)
+        
+        train = uterus.create_dataloader(X_train, y_train, batch_train, shuffle)
+        val = uterus.create_dataloader(X_val, y_val, batch_test, shuffle)
+        test = uterus.create_dataloader(X_test, y_test, batch_test, shuffle)
+        
+        return train, val, test, scaler
+
+        
+        
+
+        
+        
+        
         
         
         
