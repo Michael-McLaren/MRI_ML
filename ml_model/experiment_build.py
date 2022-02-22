@@ -21,10 +21,9 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 
-from data_generation import uterus
-from combined_loss import combined, MSE_pk, MSE_curve
-from utils import LRScheduler, EarlyStopping
-from tkmodel.TwoCUM_copy import TwoCUM
+from .combined_loss import combined, MSE_pk, MSE_curve
+from .utils import LRScheduler, EarlyStopping
+from .tkmodel.TwoCUM_copy import TwoCUM
 
 class ExperimentBuilder(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data,
@@ -283,29 +282,30 @@ class ExperimentBuilder(nn.Module):
         
 
         fig, ax = plt.subplots()
-        sns.kdeplot(df['E_pred'], ax=ax, label = 'Predicted')
-        sns.kdeplot(df['E_true'], ax=ax, label = 'True')
+        ax.hist(full_val[:,0], label = 'Predicted', alpha = 0.5, bins = 100)
+        ax.hist(full_val[:,3], label = 'True', alpha = 0.5, bins = 100)
         fig.legend()
-        file_name = os.path.join(self.experiment_logs, 'E_kde.png')
+        file_name = os.path.join(self.experiment_logs, 'E_hist.png')
         plt.savefig(file_name)
         plt.clf()
         
         fig, ax = plt.subplots()
-        sns.kdeplot(df['Fp_true'], ax=ax, label = 'Predicted')
-        sns.kdeplot(df['Fp_pred'], ax=ax, label = 'True')
+        ax.hist(full_val[:,1], label = 'Predicted', alpha = 0.5, range = [0,0.02], bins = 100)
+        ax.hist(full_val[:,4], label = 'True', alpha = 0.5, range = [0,0.02], bins = 100)
         fig.legend()
-        file_name = os.path.join(self.experiment_logs, 'Fp_kde.png')
+        file_name = os.path.join(self.experiment_logs, 'Fp_hist.png')
         plt.savefig(file_name)
         plt.clf()
         
         fig, ax = plt.subplots()
-        sns.kdeplot(df['vp_pred'], ax=ax, label = 'Predicted')
-        sns.kdeplot(df['vp_true'], ax=ax, label = 'True')
+        ax.hist(full_val[:,2], label = 'Predicted', alpha = 0.5, bins = 100)
+        ax.hist(full_val[:,5], label = 'True', alpha = 0.5, bins = 100)
         fig.legend()
-        file_name = os.path.join(self.experiment_logs, 'vp_kde.png')
+        file_name = os.path.join(self.experiment_logs, 'vp_hist.png')
         plt.savefig(file_name)
         plt.clf()
-    
+        
+        
     def example_fit(self, x, y, x_norm):
         '''
         Input: x with shape (150), y with shape (3), normalised x with shape (150)

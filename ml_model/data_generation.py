@@ -224,7 +224,7 @@ class uterus(tissue):
         
         return dataloader
     
-    def create_data(self, batch_train, batch_test, shuffle):
+    def create_mixed_data(self, batch_train, batch_test, shuffle):
         '''
         Needs to output 3 shuffled standardised dataloaders
         '''
@@ -238,10 +238,17 @@ class uterus(tissue):
         
         self.add_noise()   
         
-        X  = np.concatenate((X_real, self.x), axis = 0)
-        y  = np.concatenate((y_real, self.y), axis = 0)
+        #split both synth and real data
+        X_train_synth, X_val_synth, y_train_synth, y_val_synth = train_test_split(self.x, self.y, test_size = 0.2 ,shuffle = False)
+        X_train_real, X_val_real, y_train_real, y_val_real = train_test_split(X_real, y_real, test_size = 0.2 ,shuffle = False)
         
-        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size = 0.2 ,shuffle = False)
+        #combine into train and val
+        X_train  = np.concatenate((X_train_synth, X_train_real), axis = 0)
+        y_train  = np.concatenate((y_train_synth, y_train_real), axis = 0)
+        
+        X_val  = np.concatenate((X_val_synth, X_val_real), axis = 0)
+        y_val  = np.concatenate((y_val_synth, y_val_real), axis = 0)
+        
         
         scaler.fit(X_train)
         
