@@ -63,7 +63,7 @@ def main():
     num = 100000
     
     uterus_data = uterus(num)
-    train, val, test, scaler = uterus_data.create_data(batch_train, batch_val, shuffle = True)
+    train, val, test, scaler = uterus_data.create_mixed_data(batch_train, batch_val, shuffle = True)
     
     custom_conv_net = BasicNet()
     
@@ -91,7 +91,6 @@ def main():
     mri_experiment.pk_dist()
     
     
-    mri_experiment.testing(epoch=best_val_model_idx)
     
 if __name__ == '__main__':
     main()

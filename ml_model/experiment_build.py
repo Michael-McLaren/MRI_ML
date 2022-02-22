@@ -21,9 +21,9 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 
-from .combined_loss import combined, MSE_pk, MSE_curve
-from .utils import LRScheduler, EarlyStopping
-from .tkmodel.TwoCUM_copy import TwoCUM
+from combined_loss import combined, MSE_pk, MSE_curve
+from utils import LRScheduler, EarlyStopping
+from tkmodel.TwoCUM_copy import TwoCUM
 
 class ExperimentBuilder(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data,
@@ -55,7 +55,7 @@ class ExperimentBuilder(nn.Module):
         #self.model.reset_parameters()  # re-initialize network parameters
         self.train_data = train_data 
         self.val_data = val_data
-        self.test_data = test_add_module
+        self.test_data = test_data
         
         #used for inverse transformations
         self.scaler = scaler
