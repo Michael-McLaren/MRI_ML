@@ -18,6 +18,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
+from scipy.stats import ks_2samp
+
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 
@@ -27,7 +29,7 @@ from tkmodel.TwoCUM_copy import TwoCUM
 
 class ExperimentBuilder(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data,
-                 test_data, scaler, weight_decay_coefficient, pk_weight, curve_weight, lr, save = 1):
+                 test_data, weight_decay_coefficient, pk_weight, curve_weight, lr, save = True):
         """
         Initializes an ExperimentBuilder object. Such an object takes care of running training and evaluation of a deep net
         on a given dataset. It also takes care of saving per epoch models and automatically inferring the best val model
@@ -58,7 +60,6 @@ class ExperimentBuilder(nn.Module):
         self.test_data = test_data
         
         #used for inverse transformations
-        self.scaler = scaler
         
         self.save = save
         
@@ -70,19 +71,20 @@ class ExperimentBuilder(nn.Module):
         self.early_stopping = EarlyStopping(patience = 10)
         
         # Generate the directory names
-        self.experiment_folder = os.path.abspath(experiment_name)
-        self.experiment_logs = os.path.abspath(os.path.join(self.experiment_folder, "result_outputs"))
-        self.experiment_saved_models = os.path.abspath(os.path.join(self.experiment_folder, "saved_models"))
-        
-        if not os.path.exists(self.experiment_folder):  # If experiment directory does not exist
-            os.mkdir(self.experiment_folder)  # create the experiment directory
-            os.mkdir(self.experiment_logs)  # create the experiment log directory
-            os.mkdir(self.experiment_saved_models)  # create the experiment saved models directory
+        if self.save:
+            self.experiment_folder = os.path.abspath(experiment_name)
+            self.experiment_logs = os.path.abspath(os.path.join(self.experiment_folder, "result_outputs"))
+            self.experiment_saved_models = os.path.abspath(os.path.join(self.experiment_folder, "saved_models"))
+            
+            if not os.path.exists(self.experiment_folder):  # If experiment directory does not exist
+                os.mkdir(self.experiment_folder)  # create the experiment directory
+                os.mkdir(self.experiment_logs)  # create the experiment log directory
+                os.mkdir(self.experiment_saved_models)  # create the experiment saved models directory
 
         
         # Set best models to be at 1000 since we are just starting
         self.best_val_model_idx = 0
-        self.best_val_model_loss = 5000
+        self.best_val_model_loss = 20000
         
         self.num_epochs = num_epochs
         self.criterion = combined  # send the loss computation to the GPU
@@ -139,11 +141,13 @@ class ExperimentBuilder(nn.Module):
         :param model_save_dir: The directory to store the state at.
         :param state: The dictionary containing the system state.
         """
-        self.state['network'] = self.state_dict()  # save network parameter and other variables.
-        self.state['best_val_model_idx'] = best_validation_model_idx  # save current best val idx
-        self.state['best_val_model_loss'] = best_validation_model_loss  # save current best val acc
-        torch.save(self.state, f=os.path.join(model_save_dir, "{}_{}".format(model_save_name, str(
-            model_idx))))  # save state at prespecified filepath
+        if self.save:
+            
+            self.state['network'] = self.state_dict()  # save network parameter and other variables.
+            self.state['best_val_model_idx'] = best_validation_model_idx  # save current best val idx
+            self.state['best_val_model_loss'] = best_validation_model_loss  # save current best val acc
+            torch.save(self.state, f=os.path.join(model_save_dir, "{}_{}".format(model_save_name, str(
+                model_idx))))  # save state at prespecified filepath
         
     
     
@@ -171,20 +175,20 @@ class ExperimentBuilder(nn.Module):
         :param save_full_dict: whether to save the full dict as is overriding any previous entries (might be useful if we want to overwrite a file)
         :return: The filepath to the summary file
         """
-        
-        summary_filename = os.path.join(experiment_log_dir, filename)
-        mode = 'a' if continue_from_mode else 'w' #append unless its the header
-        with open(summary_filename, mode) as f:
-            writer = csv.writer(f)
-            
-            #writes the header
-            if not continue_from_mode:
-                writer.writerow(list(stats_dict.keys()))
-            
-            #writes the main part
-            else:
-                row_to_add = [value[current_epoch] for value in list(stats_dict.values())]
-                writer.writerow(row_to_add)
+        if self.save:
+            summary_filename = os.path.join(experiment_log_dir, filename)
+            mode = 'a' if continue_from_mode else 'w' #append unless its the header
+            with open(summary_filename, mode) as f:
+                writer = csv.writer(f)
+                
+                #writes the header
+                if not continue_from_mode:
+                    writer.writerow(list(stats_dict.keys()))
+                
+                #writes the main part
+                else:
+                    row_to_add = [value[current_epoch] for value in list(stats_dict.values())]
+                    writer.writerow(row_to_add)
     
         return summary_filename
 
@@ -277,9 +281,7 @@ class ExperimentBuilder(nn.Module):
                 full_val = combined_values
             else:
                 full_val = np.concatenate((full_val, combined_values))
-        
-        df = pd.DataFrame(full_val, columns = ['E_pred','Fp_pred','vp_pred','E_true','Fp_true','vp_true'])   
-        
+                
 
         fig, ax = plt.subplots()
         ax.hist(full_val[:,0], label = 'Predicted', alpha = 0.5, bins = 100)
@@ -304,6 +306,14 @@ class ExperimentBuilder(nn.Module):
         file_name = os.path.join(self.experiment_logs, 'vp_hist.png')
         plt.savefig(file_name)
         plt.clf()
+        
+        E_stat = ks_2samp(full_val[:,0], full_val[:,3])[0]
+        Fp_stat = ks_2samp(full_val[:,1], full_val[:,4])[0]
+        vp_stat = ks_2samp(full_val[:,2], full_val[:,5])[0]
+
+
+        
+        return E_stat, Fp_stat, vp_stat
         
         
     def example_fit(self, x, y, x_norm):
@@ -386,7 +396,7 @@ class ExperimentBuilder(nn.Module):
                 
                 
                 
-                if self.save == 1:
+                if self.save:
                     self.save_model(model_save_dir=self.experiment_saved_models,
                 # save model and best val idx and best val acc, using the model dir, model name and model idx
                         model_save_name="train_model", model_idx=epoch_idx,

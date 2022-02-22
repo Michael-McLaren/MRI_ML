@@ -13,7 +13,7 @@ import torch.utils.data as Data
 import os
 import matplotlib.pyplot as plt
 
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.model_selection import train_test_split
 
 from tkmodel.TwoCUM_copy import TwoCUMfittingConc
@@ -56,6 +56,24 @@ class uterus(tissue):
         
         self.num = num
         self.x, self.y = self.generate_xy()
+        '''
+        nan_ind = np.array(np.where(np.isnan(self.x)))[0]
+        nan_ind = np.unique(nan_ind)
+        print(nan_ind)
+        self.x = np.delete(self.x, nan_ind)
+        self.y = np.delete(self.y, nan_ind)
+        '''
+        #removes all rows that have nan values
+        self.y = self.y[~np.isnan(self.x).any(axis=1)]
+        self.x = self.x[~np.isnan(self.x).any(axis=1)]
+        
+        nan_ind = np.array(np.where(np.isnan(self.x)))[0]
+        print('nan: ', nan_ind)
+        
+        big_ind = np.array(np.where(np.abs(self.x) > 100))[0]
+        print('>100: ', big_ind)
+        
+        
 
         
     def save_data(self, experiment_folder, name):
@@ -88,55 +106,50 @@ class uterus(tissue):
 
         
     def E_distribution(self):
-        p = 0.09392265193370165
-        params = (69.70266807226483, 1.0792465008741048, -0.23357477054649745, 0.08955766184221467)
-        start_nums = int(p*self.num)
+        start_percent, end_percent = 0.2157, 0.089
+        params = (1.7162775627078726, 0.6992052384902265, 7.607697024682173e-06, 0.08199239222931205)
+        start_nums = int(start_percent*self.num)
+        end_nums = int(end_percent*self.num)
         
-        start = np.random.uniform(low = 0, high= 0.001, size = start_nums)
+        start = np.random.uniform(low = 0, high= 0.00001, size = start_nums)
+        end = np.random.uniform(low = 0.99, high= 1, size = end_nums)
         
-        dist_num = self.num - start_nums
-        gen_data_Fp = st.exponweib.rvs(params[0], params[1], params[2], params[3], size=dist_num)
-        gen_data_Fp = np.array(gen_data_Fp)
+        dist_num = self.num - start_nums - end_nums
+        gen_data_E = st.exponweib.rvs(params[0], params[1], params[2], params[3], size=dist_num)
+        gen_data_E = np.array(gen_data_E)
         
-        true_dist = np.concatenate((start, gen_data_Fp), axis=None)
+        true_dist = np.concatenate((start, gen_data_E), axis=None)
+        true_dist = np.concatenate((true_dist, end), axis=None)
         
-        true_dist[true_dist < 0] = 0.0001
-    
+        true_dist[true_dist> 1] = 1
+        
         return true_dist
     
     def Fp_distribution(self):
-        p = 0.1182
-        params = (1.064799958220838, 0.0005001496965058328, 0.007151833882619035)
-        start_nums = int(p*self.num)
-        
-        start = np.random.uniform(low = 0, high= 0.0005, size = start_nums)
-        
-        dist_num = self.num - start_nums
-        gen_data_Fp = st.weibull_min.rvs(params[0], params[1], params[2], size=dist_num)
-        gen_data_Fp = np.array(gen_data_Fp)
-        
-        true_dist = np.concatenate((gen_data_Fp, start), axis=None)
-        #true_dist[true_dist > 1] = 0.99
+        params = (1.222754777103586, 0.49935926672960007, 3.0005798742817294e-05, 0.001543309761969799)
     
-        
+        gen_Fp_list = st.exponweib.rvs(params[0], params[1], params[2], params[3], size=self.num)
+        true_dist = np.array(gen_Fp_list)
         
         return true_dist
     
     def vp_distrubition(self):
-        params = (29572479.030125827, 6450136.935704315, 6450136.715197781)
-        p = 0.287
-        endnum = int(p*self.num)
-        end = np.random.uniform(low = 0.98, high= 0.99, size = endnum)
+        start_percent, end_percent = 0.16145, 0.0839
+        params = (0.501198003887801, 1.3306579742427025, 0.010005660986937497, 0.395689314967677)
+        start_nums = int(start_percent*self.num)
+        end_nums = int(end_percent*self.num)
         
-        dist_num = self.num - endnum
-        gen_data_vp = st.weibull_max.rvs(params[0], params[1], params[2], size=dist_num)
+        start = np.random.uniform(low = 0, high= 0.01, size = start_nums)
+        end = np.random.uniform(low = 0.98, high= 0.99, size = end_nums)
+        
+        dist_num = self.num - start_nums - end_nums
+        gen_data_vp = st.exponweib.rvs(params[0], params[1], params[2], params[3], size=dist_num)
         gen_data_vp = np.array(gen_data_vp)
         
-        true_dist = np.concatenate((gen_data_vp, end), axis=None)
-        true_dist[true_dist > 1] = 0.99
-        true_dist[true_dist < 0] = 0.011
-    
+        true_dist = np.concatenate((start, gen_data_vp), axis=None)
+        true_dist = np.concatenate((true_dist, end), axis=None)
         
+        true_dist[true_dist> 1] = 1
         
         return true_dist
     
@@ -171,6 +184,8 @@ class uterus(tissue):
         x = np.zeros((self.num, data_size))
         for i in range(self.num):
             x[i] = TwoCUM(y[:,i], t, AIF, 0)
+            if x[i].max() > 100:
+                print(i, ' : ', y[:,i])
     
         y = y.T 
         
@@ -181,14 +196,19 @@ class uterus(tissue):
         Input: x with shape (n, 150)
         Output: x_noisy with shape (n, 150)
         '''
+        print('x shape: ', self.x.shape)
+        print('Synth max, min, mean: ', np.max(self.x), np.min(self.x), np.mean(self.x) )
+        
         std_mean = 0.015483295177018167
         noise = np.random.normal(scale = 3.7*std_mean, size =self.x.shape)
         x_noisy = np.zeros(self.x.shape)
         for i in range(self.x.shape[0]):
-            curve_max = self.x[i].max()
+            curve_max = np.max(self.x[i])
             x_noisy[i] = self.x[i] + curve_max * noise[i]
         
         self.x = x_noisy
+        
+        print('Synth noise max, min, mean: ', np.max(self.x), np.min(self.x), np.mean(self.x) )
         
     
     def plot_data(self, j = 0):
@@ -228,11 +248,12 @@ class uterus(tissue):
         '''
         Needs to output 3 shuffled standardised dataloaders
         '''
-        scaler = MinMaxScaler()
+        scaler = StandardScaler()
         
         real_x = uterus.real_x
         real_y = uterus.real_y
         
+        nan_ind = np.array(np.where(np.isnan(real_x)))[0]
         #remove the test set
         X_real, X_test, y_real, y_test = train_test_split(real_x, real_y, test_size = 0.2 ,shuffle = False)
         
@@ -260,7 +281,7 @@ class uterus(tissue):
         val = uterus.create_dataloader(X_val, y_val, batch_test, shuffle)
         test = uterus.create_dataloader(X_test, y_test, batch_test, shuffle)
         
-        return train, val, test, scaler
+        return train, val, test
 
         
         

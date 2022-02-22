@@ -14,9 +14,9 @@ import torch.nn.functional as F
 class BasicNet(nn.Module):
     def __init__(self):
         super(BasicNet, self).__init__()
-        self.hidden = torch.nn.Linear(150, 1000) 
-        self.bn1 = nn.BatchNorm1d(1000)
-        self.hidden2 = torch.nn.Linear(1000, 200) 
+        self.hidden = torch.nn.Linear(150, 200) 
+        self.bn1 = nn.BatchNorm1d(200)
+        self.hidden2 = torch.nn.Linear(200, 200) 
         self.bn2 = nn.BatchNorm1d(200)
         self.hidden3 = torch.nn.Linear(200, 200)
         self.bn3 = nn.BatchNorm1d(200)
