@@ -51,9 +51,10 @@ class uterus(tissue):
     real_x = np.load('trained_models/data/real_x_cleaned.npy')
     real_y = np.load('trained_models/data/real_y_cleaned.npy')
 
-    def __init__(self, num):
+    def __init__(self, num, smooth = False):
         super(uterus, self).__init__()
         
+        self.smooth = smooth
         self.num = num
         self.x, self.y = self.generate_xy()
         '''
@@ -153,6 +154,48 @@ class uterus(tissue):
         
         return true_dist
     
+    def E_distribution_smooth(self):
+        start_percent = 0.2157
+        params = (1.7162775627078726, 0.6992052384902265, 7.607697024682173e-06, 0.08199239222931205)
+        start_nums = int(start_percent*self.num)
+        
+        start = np.random.uniform(low = 0, high= 0.00001, size = start_nums)
+        
+        dist_num = self.num - start_nums
+        gen_data_E = st.exponweib.rvs(params[0], params[1], params[2], params[3], size=dist_num)
+        gen_data_E = np.array(gen_data_E)
+        
+        true_dist = np.concatenate((start, gen_data_E), axis=None)
+        
+        true_dist[true_dist> 1] = 1
+        
+        return true_dist
+    
+    def Fp_distribution_smooth(self):
+        params = (1.222754777103586, 0.49935926672960007, 3.0005798742817294e-05, 0.001543309761969799)
+    
+        gen_Fp_list = st.exponweib.rvs(params[0], params[1], params[2], params[3], size=self.num)
+        true_dist = np.array(gen_Fp_list)
+        
+        return true_dist
+    
+    def vp_distrubition_smooth(self):
+        start_percent, end_percent = 0.16145
+        params = (0.501198003887801, 1.3306579742427025, 0.010005660986937497, 0.395689314967677)
+        start_nums = int(start_percent*self.num)
+        
+        start = np.random.uniform(low = 0, high= 0.01, size = start_nums)
+        
+        dist_num = self.num - start_nums
+        gen_data_vp = st.exponweib.rvs(params[0], params[1], params[2], params[3], size=dist_num)
+        gen_data_vp = np.array(gen_data_vp)
+        
+        true_dist = np.concatenate((start, gen_data_vp), axis=None)
+        
+        true_dist[true_dist> 1] = 1
+        
+        return true_dist
+    
     def generate_xy(self):
         '''
         Inputs: nothing
@@ -165,10 +208,14 @@ class uterus(tissue):
         #E = np.random.rand(1,num_curves) #0 to 1 for both E and vp
         #vp = np.random.rand(1,num_curves)
         #Fp = np.random.rand(1,num_curves) #this will be multplied by 1e-5 to get the right scale at the end
-        
-        E = self.E_distribution() 
-        Fp = self.Fp_distribution()
-        vp = self.vp_distrubition()
+        if self.smooth:
+            E = self.E_distribution_smooth() 
+            Fp = self.Fp_distribution_smooth()
+            vp = self.vp_distrubition_smooth()
+        else:
+            E = self.E_distribution() 
+            Fp = self.Fp_distribution()
+            vp = self.vp_distrubition()
     
         E = E[None,:]
         Fp = Fp[None,:]
@@ -253,7 +300,6 @@ class uterus(tissue):
         real_x = uterus.real_x
         real_y = uterus.real_y
         
-        nan_ind = np.array(np.where(np.isnan(real_x)))[0]
         #remove the test set
         X_real, X_test, y_real, y_test = train_test_split(real_x, real_y, test_size = 0.2 ,shuffle = False)
         
@@ -281,7 +327,40 @@ class uterus(tissue):
         val = uterus.create_dataloader(X_val, y_val, batch_test, shuffle)
         test = uterus.create_dataloader(X_test, y_test, batch_test, shuffle)
         
-        return train, val, test
+        return train, val, test, scaler
+    
+    def create_synth_data(self, batch_train, batch_test, shuffle):
+        '''
+        Needs to output 3 shuffled standardised dataloaders
+        '''
+        scaler = StandardScaler()
+        
+        real_x = uterus.real_x
+        real_y = uterus.real_y
+        
+        #remove the test set
+        X_real, X_test, y_real, y_test = train_test_split(real_x, real_y, test_size = 0.2 ,shuffle = False)
+        
+        self.add_noise()   
+        
+        #split both synth and real data
+        X_train_synth, X_val_synth, y_train_synth, y_val_synth = train_test_split(self.x, self.y, test_size = 0.2 ,shuffle = False)
+        
+        #combine into train and val
+
+        
+        
+        scaler.fit(X_train_synth)
+        
+        X_train = scaler.transform(X_train_synth)
+        X_val = scaler.transform(X_val_synth)
+        X_test = scaler.transform(X_test)
+        
+        train = uterus.create_dataloader(X_train, y_train_synth, batch_train, shuffle)
+        val = uterus.create_dataloader(X_val, y_val_synth, batch_test, shuffle)
+        test = uterus.create_dataloader(X_test, y_test, batch_test, shuffle)
+        
+        return train, val, test, scaler
 
         
         

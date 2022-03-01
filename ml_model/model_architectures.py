@@ -37,11 +37,16 @@ class BasicNet(nn.Module):
         x = self.bound(x)
         return x
     
-def layer(in_f, out_f, p = 0.5):
+def layer_dropout(in_f, out_f, p = 0.5):
         return nn.Sequential(nn.Linear(in_f, out_f),
                              nn.BatchNorm1d(out_f),
                              nn.ReLU(),
                              nn.Dropout(p = p))
+        
+def layer(in_f, out_f):
+        return nn.Sequential(nn.Linear(in_f, out_f),
+                             nn.BatchNorm1d(out_f),
+                             nn.ReLU())
 
 class NeuralNet(nn.Module):
     def __init__(self, enc_sizes):
@@ -52,13 +57,37 @@ class NeuralNet(nn.Module):
         layer_list = [layer(in_f, out_f) for in_f, out_f in zip(self.enc_sizes, self.enc_sizes[1:])]
         
         self.model = nn.Sequential(*layer_list)
+        
+        #use the last width in the last
+        self.predict = torch.nn.Linear(self.enc_sizes[-1], 3)
         self.bound = nn.Sigmoid()
 
         
     def forward(self, x):
 
         x = self.model(x) 
+        x = self.predict(x)
+        x = self.bound(x)
         
+        return x
+    
+class NeuralNet_Dropout(nn.Module):
+    def __init__(self, enc_sizes, p = 0.5):
+        super(NeuralNet_Dropout, self).__init__()
+        self.enc_sizes = enc_sizes #list, for inputs and outputs size
+        
+        #zip iterates to smallest list size
+        layer_list = [layer_dropout(in_f, out_f, p) for in_f, out_f in zip(self.enc_sizes, self.enc_sizes[1:])]
+        
+        self.model = nn.Sequential(*layer_list)
+        self.predict = torch.nn.Linear(self.enc_sizes[-1], 3)
+        self.bound = nn.Sigmoid()
+
+        
+    def forward(self, x):
+
+        x = self.model(x) 
+        x = self.predict(x)
         x = self.bound(x)
         
         return x

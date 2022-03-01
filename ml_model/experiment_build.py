@@ -29,7 +29,7 @@ from tkmodel.TwoCUM_copy import TwoCUM
 
 class ExperimentBuilder(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data,
-                 test_data, weight_decay_coefficient, pk_weight, curve_weight, lr, save = True):
+                 test_data, weight_decay_coefficient, pk_weight, curve_weight, scaler, lr, save = True):
         """
         Initializes an ExperimentBuilder object. Such an object takes care of running training and evaluation of a deep net
         on a given dataset. It also takes care of saving per epoch models and automatically inferring the best val model
@@ -59,6 +59,8 @@ class ExperimentBuilder(nn.Module):
         self.val_data = val_data
         self.test_data = test_data
         
+        #used to reverse the scale transformation
+        self.scaler = scaler
         #used for inverse transformations
         
         self.save = save
@@ -85,6 +87,9 @@ class ExperimentBuilder(nn.Module):
         # Set best models to be at 1000 since we are just starting
         self.best_val_model_idx = 0
         self.best_val_model_loss = 20000
+        
+        self.best_val_model_idx_curve = 0
+        self.best_val_model_loss_curve = 20000
         
         self.num_epochs = num_epochs
         self.criterion = combined  # send the loss computation to the GPU
@@ -316,18 +321,13 @@ class ExperimentBuilder(nn.Module):
         return E_stat, Fp_stat, vp_stat
         
         
-    def example_fit(self, x, y, x_norm):
+    def example_fit(self, y, pred_y, x):
         '''
         Input: x with shape (150), y with shape (3), normalised x with shape (150)
         Normalised data is needed to show the original scatter data
         '''
         self.model.eval()
         
-        input_x = torch.tensor(x_norm)
-        input_x = input_x.unsqueeze(0)
-        input_x = input_x.float()
-        output_y = self.model.forward(input_x)
-        pred_y = output_y[0].detach().numpy()
         
         print(pred_y, y)
         target_curve = TwoCUM(y, self.time, self.AIF, 0)
@@ -384,7 +384,7 @@ class ExperimentBuilder(nn.Module):
                     
             #if it does better on the val data then save it
             val_mean_loss = np.mean(current_epoch_losses['val_loss'])
-            
+            val_mean_loss_curve = np.mean(current_epoch_losses['curve_val_loss'])
             #update the learning rate
             self.lr_scheduler(val_mean_loss)
             
@@ -393,8 +393,11 @@ class ExperimentBuilder(nn.Module):
             if val_mean_loss < self.best_val_model_loss:  # save the best val loss
                 self.best_val_model_loss = val_mean_loss  # set the best val model loss to be current epoch's val accuracy
                 self.best_val_model_idx = epoch_idx  # set the experiment-wise best val idx to be the current epoch's idx
-                
-                
+            
+            #same but for curve loss, just so i have a different metric to judge models off
+            if val_mean_loss_curve < self.best_val_model_loss_curve:  
+                self.best_val_model_loss_curve = val_mean_loss_curve  
+                self.best_val_model_idx_curve = epoch_idx  
                 
                 if self.save:
                     self.save_model(model_save_dir=self.experiment_saved_models,
@@ -426,9 +429,10 @@ class ExperimentBuilder(nn.Module):
         
         return self.best_val_model_loss, self.best_val_model_idx
     
-    def testing(self, epoch, test = 0):
+    def testing(self):
         
-        self.load_model(self.experiment_saved_models, 'train_model', epoch)
+        #choose the best val model to load
+        self.load_model(self.experiment_saved_models, 'train_model', self.best_val_model_idx)
         
         #train data example
         for i, (test_x, test_y) in enumerate(self.test_data):
@@ -436,16 +440,31 @@ class ExperimentBuilder(nn.Module):
             
             prediction_test = prediction_test.detach().numpy()
             test_y = test_y.detach().numpy()
+            test_x = test_x.detach().numpy()
             
             combined_values = np.concatenate((prediction_test, test_y), axis = 1)
             
             #loop through and combine all the batches into one whole
             if i == 0:
-                full_test = combined_values
+                full_test_y = combined_values
+                full_test_x = test_x
             else:
-                full_test = np.concatenate((full_test, combined_values))
+                full_test_y = np.concatenate((full_test_y, combined_values))
+                full_test_x = np.concatenate((full_test_x, test_x))
         
-        full_test = self.scaler.inverse_transform(full_test)
+        #inverse transformation on the data
+        full_test_x = self.scaler.inverse_transform(full_test_x)
+        
+        
+        print('\n combined y array shape: ', full_test_y.shape, '\n x array shape: ', full_test_x.shape)
+        while True:
+            cont = input('write break to stop the loop: ')
+            if cont == 'break':
+                break
+            
+            j = int(input('input index int: '))
+            self.example_fit(y = full_test_y[j,3:], pred_y = full_test_y[j,:3], x = full_test_x[j,:])
+        
             
             
         

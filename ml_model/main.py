@@ -7,7 +7,7 @@ from torchvision import transforms
 from data_generation import uterus
 from arg_extractor import get_args
 from experiment_build import ExperimentBuilder
-from model_architectures import BasicNet
+from model_architectures import BasicNet, NeuralNet, NeuralNet_Dropout
 import os 
 
 '''
@@ -63,9 +63,11 @@ def main():
     num = 100000
     
     uterus_data = uterus(num)
-    train, val, test = uterus_data.create_mixed_data(batch_train, batch_val, shuffle = True)
+    train, val, test, scaler = uterus_data.create_mixed_data(batch_train, batch_val, shuffle = True)
     
-    custom_conv_net = BasicNet()
+    enc_sizes = [150, 200]
+    custom_conv_net = NeuralNet_Dropout(enc_sizes)
+    print(custom_conv_net)
     
     mri_experiment = ExperimentBuilder(network_model=custom_conv_net,
                                         experiment_name=args.experiment_name,
@@ -76,7 +78,8 @@ def main():
                                         lr = args.lr,
                                         train_data=train, 
                                         val_data=val,
-                                        test_data=test)  # build an experiment object
+                                        test_data=test, 
+                                        scaler = scaler)  # build an experiment object
     
 
     
@@ -87,7 +90,11 @@ def main():
     
     mri_experiment.loss_plot()
     
-    mri_experiment.pk_dist()
+    E_stat, Fp_stat, vp_stat = mri_experiment.pk_dist()
+    str_ = '\n E stat: {:.3f} \n Fp stat: {:.3f} \n vp stat: {:.3f}'.format(E_stat, E_stat, vp_stat)
+    print(str_)
+    
+    mri_experiment.testing()
     
     
     
