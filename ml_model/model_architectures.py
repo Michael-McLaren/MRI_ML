@@ -36,3 +36,29 @@ class BasicNet(nn.Module):
         x = self.predict(x) 
         x = self.bound(x)
         return x
+    
+def layer(in_f, out_f, p = 0.5):
+        return nn.Sequential(nn.Linear(in_f, out_f),
+                             nn.BatchNorm1d(out_f),
+                             nn.ReLU(),
+                             nn.Dropout(p = p))
+
+class NeuralNet(nn.Module):
+    def __init__(self, enc_sizes):
+        super(NeuralNet, self).__init__()
+        self.enc_sizes = enc_sizes #list, for inputs and outputs size
+        
+        #zip iterates to smallest list size
+        layer_list = [layer(in_f, out_f) for in_f, out_f in zip(self.enc_sizes, self.enc_sizes[1:])]
+        
+        self.model = nn.Sequential(*layer_list)
+        self.bound = nn.Sigmoid()
+
+        
+    def forward(self, x):
+
+        x = self.model(x) 
+        
+        x = self.bound(x)
+        
+        return x
