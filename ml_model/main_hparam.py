@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Mar  2 11:11:42 2022
+
+@author: s1740929
+"""
+
 
 import numpy as np
 import torch
@@ -6,17 +14,13 @@ from torchvision import transforms
 
 from data_generation import uterus
 from arg_extractor import get_args
-from experiment_build_rnn import ExperimentBuilder
-from model_architectures import BasicNet, NeuralNet, NeuralNet_Dropout, GRUModel
+from experiment_build import ExperimentBuilder
+from model_architectures import BasicNet, NeuralNet, NeuralNet_Dropout
 import os 
-
-'''
-example command for running on terminal
-ython ml_model/main.py --num_epochs 100 --experiment_name trained_models/curve
-'''
 
 
 def main():
+    args = get_args()  
     
     args = get_args()  
     
@@ -52,14 +56,12 @@ def main():
                                         save = True)  # build an experiment object
     
 
-    '''
-    best_val_model_loss, best_val_model_idx = mri_experiment.run_experiment()  # run experiment and return experiment metrics
+    
+    best_val_model_loss, best_val_model_idx, best_val_model_loss_curve = mri_experiment.run_experiment()  # run experiment and return experiment metrics
     print('\n best val model loss: ', best_val_model_loss)
     print('\n best val model idx: ', best_val_model_idx)
     print('\n best val model loss curve: ', best_val_model_loss_curve)
-    '''
-    experiment_saved_models = os.path.abspath(os.path.join('trained_models/gru', "saved_models"))
-    mri_experiment.load_model(experiment_saved_models, 'train_model', 9)
+
     
     mri_experiment.loss_plot()
     
@@ -71,7 +73,6 @@ def main():
     print(str_1)
     
     mri_experiment.testing1()
-    
     
     
 if __name__ == '__main__':

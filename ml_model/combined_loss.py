@@ -6,6 +6,8 @@ Created on Tue Jan 25 20:38:01 2022
 @author: s1740929
 """
 import torch
+import torch.nn as nn
+
 import numpy as np
 
 from tkmodel.TwoCUM_copy import TwoCUMfittingConc
@@ -52,9 +54,12 @@ def loss_fn_batch(outputs, targets):
     MSE = torch.sum((F_out - F_targets)**2)/F_out.shape[1]
     return MSE
 
+mse_loss = nn.MSELoss()
+
 def MSE_pk(outputs, targets, pk_weight):
-    MSE_pk = pk_weight*torch.sum((outputs - targets)**2)
+    MSE_pk = pk_weight*mse_loss(outputs, targets)
     return MSE_pk
+
 
 def MSE_curve(outputs, targets, curve_weight):
     MSE_curve = curve_weight * loss_fn_batch(outputs, targets)

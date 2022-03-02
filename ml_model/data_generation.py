@@ -180,7 +180,7 @@ class uterus(tissue):
         return true_dist
     
     def vp_distrubition_smooth(self):
-        start_percent, end_percent = 0.16145
+        start_percent = 0.16145
         params = (0.501198003887801, 1.3306579742427025, 0.010005660986937497, 0.395689314967677)
         start_nums = int(start_percent*self.num)
         
@@ -192,7 +192,6 @@ class uterus(tissue):
         
         true_dist = np.concatenate((start, gen_data_vp), axis=None)
         
-        true_dist[true_dist> 1] = 1
         
         return true_dist
     
