@@ -108,11 +108,12 @@ class GRUModel(nn.Module):
 
         # Fully connected layer
         self.fc = nn.Linear(hidden_dim, output_dim)
+        self.bound = nn.Sigmoid()
 
     def forward(self, x):
         # Initializing hidden state for first input with zeros
         #input shape is (batch size, seq_len, num_features)
-        h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).requires_grad_()
+        h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim, device = x.device).requires_grad_()
         
         # Forward propagation by passing in the input and hidden state into the model
         out, _ = self.gru(x, h0.detach())
@@ -123,5 +124,6 @@ class GRUModel(nn.Module):
 
         # Convert the final state to our desired output shape (batch_size, output_dim)
         out = self.fc(out)
+        out = self.bound(out)
 
         return out

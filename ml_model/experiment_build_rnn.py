@@ -101,7 +101,7 @@ class ExperimentBuilder(nn.Module):
         #just so i have another metric to judge off
         
         self.num_epochs = num_epochs
-        self.criterion = MSE_pk # send the loss computation to the GPU
+        self.criterion = combined # send the loss computation to the GPU
 
         self.AIF = torch.from_numpy(np.load("data/AIF.npy"))
         self.time = np.arange(0,366,2.45)
@@ -114,14 +114,15 @@ class ExperimentBuilder(nn.Module):
         self.train()
         self.optimizer.zero_grad()
         output = self.model.forward(x)
-        loss = self.criterion(output, y, self.pk_weight)
+        loss = self.criterion(output, y, 
+                              pk_weight = self.pk_weight, curve_weight = self.curve_weight)
         
 
         
         loss.backward()
         self.optimizer.step()
            
-        return loss
+        return loss.item()
     
     def run_evaluation_iter(self, x, y):
         """
@@ -133,10 +134,11 @@ class ExperimentBuilder(nn.Module):
         with torch.no_grad(): #removes gradient from torch vectors
                 self.eval() # sets the system to validation mode for dropout layers and such
                 output = self.model.forward(x)
-                loss = self.criterion(output, y, self.pk_weight)
+                loss = self.criterion(output, y, 
+                                      pk_weight = self.pk_weight, curve_weight = self.curve_weight)
                 
         
-        return loss
+        return loss.item()
     
     def save_model(self, model_save_dir, model_save_name, model_idx, best_validation_model_idx,
                    best_validation_model_loss):
@@ -245,9 +247,9 @@ class ExperimentBuilder(nn.Module):
         
 
         for i, (val_x, val_y) in enumerate(self.val_data):
-            val_x = val_x[:,:,None]
+            val_x = val_x[:,:,None].to(self.device)
             prediction_val = self.model.forward(val_x)
-            prediction_val = prediction_val.detach().numpy()
+            prediction_val = prediction_val.cpu().detach().numpy()
             val_y = val_y.detach().numpy()
             
             combined_values = np.concatenate((prediction_val, val_y), axis = 1)
@@ -353,7 +355,7 @@ class ExperimentBuilder(nn.Module):
                     x = x[:,:,None].to(self.device)
                     y = y.to(self.device)
                     loss = self.run_train_iter(x=x, y=y)  # take a training iter step
-                    current_epoch_losses["train_loss"].append(loss.detach().numpy())  # add current iter loss to the train loss list
+                    current_epoch_losses["train_loss"].append(loss)  # add current iter loss to the train loss list
   # add current iter loss to the train loss list
 
                     #descriptive stuff to make it pretty
@@ -366,7 +368,7 @@ class ExperimentBuilder(nn.Module):
                     x = x[:,:,None].to(self.device)
                     y = y.to(self.device)
                     loss = self.run_evaluation_iter(x=x, y=y)  # run a validation iter
-                    current_epoch_losses["val_loss"].append(loss.detach().numpy())  # add current iter loss to val loss list.
+                    current_epoch_losses["val_loss"].append(loss)  # add current iter loss to val loss list.
                    
                                         
                     #descriptive stuff to make it pretty
@@ -455,7 +457,7 @@ class ExperimentBuilder(nn.Module):
     def testing1(self):
         
         #choose the best val model to load
-        #self.load_model(self.experiment_saved_models, 'train_model', self.best_val_model_idx)
+        self.load_model(self.experiment_saved_models, 'train_model', self.best_val_model_idx)
         
         self.model.eval()
         #train data example
@@ -468,12 +470,12 @@ class ExperimentBuilder(nn.Module):
                 
             for i, (test_x, test_y) in enumerate(self.train_data):
                 j = np.random.randint(low = 0, high = test_x.shape[0])
-                test_x = test_x[:,:,None]
+                test_x = test_x[:,:,None].to(self.device)
                 prediction_test = self.model.forward(test_x)
                 
-                prediction_test = prediction_test.detach().numpy()
+                prediction_test = prediction_test.cpu().detach().numpy()
                 test_y = test_y.detach().numpy()
-                test_x = test_x.detach().numpy()
+                test_x = test_x.cpu().detach().numpy()
                 test_x = np.squeeze(test_x)
                 test_x = self.scaler.inverse_transform(test_x)
                 
@@ -484,13 +486,13 @@ class ExperimentBuilder(nn.Module):
             
             for i, (test_x, test_y) in enumerate(self.val_data):
                 j = np.random.randint(low = 0, high = test_x.shape[0])
-                test_x = test_x[:,:,None]
+                test_x = test_x[:,:,None].to(self.device)
 
                 prediction_test = self.model.forward(test_x)
                 
-                prediction_test = prediction_test.detach().numpy()
+                prediction_test = prediction_test.cpu().detach().numpy()
                 test_y = test_y.detach().numpy()
-                test_x = test_x.detach().numpy()
+                test_x = test_x.cpu().detach().numpy()
                 test_x = np.squeeze(test_x)
                 test_x = self.scaler.inverse_transform(test_x)
                 
@@ -499,13 +501,13 @@ class ExperimentBuilder(nn.Module):
                 
             for i, (test_x, test_y) in enumerate(self.test_data):
                 j = np.random.randint(low = 0, high = test_x.shape[0])
-                test_x = test_x[:,:,None]
+                test_x = test_x[:,:,None].to(self.device)
 
                 prediction_test = self.model.forward(test_x)
                 
-                prediction_test = prediction_test.detach().numpy()
+                prediction_test = prediction_test.cpu().detach().numpy()
                 test_y = test_y.detach().numpy()
-                test_x = test_x.detach().numpy()
+                test_x = test_x.cpu().detach().numpy()
                 test_x = np.squeeze(test_x)
                 test_x = self.scaler.inverse_transform(test_x)
                 

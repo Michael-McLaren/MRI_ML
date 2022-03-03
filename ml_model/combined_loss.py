@@ -29,15 +29,18 @@ def TwoCUM_batch(E, Fp ,vp, AIF1 , t, ep = 1e-8):
     F = Fp.unsqueeze(-1)*temp[:,0:len(t)] #unsqueeze to match dimensions
     return F
 
+#couldnt get it working without initiating outside
+mse_loss_curve = nn.MSELoss()
+
 def loss_fn_batch(outputs, targets):
     #E, Fp, vp
     #time spacings
+    device = targets.device
     t = np.arange(0,366,2.45)
-    t = torch.tensor(t)
+    t = torch.tensor(t).to(device)
     
-    batch_size = outputs[:,0].shape[0]
     AIF = torch.from_numpy(np.load("data/AIF.npy")) #WOULD THIS SLOW IT DOWN
-    AIF1 = AIF.view(1, 1, -1) #reshaped for convolution
+    AIF1 = AIF.view(1, 1, -1).to(device) #reshaped for convolution
 
     
     #For outputs
@@ -51,13 +54,13 @@ def loss_fn_batch(outputs, targets):
     F_targets = TwoCUM_batch(E_true, Fp_true ,vp_true, AIF1, t)
 
     
-    MSE = torch.sum((F_out - F_targets)**2)/F_out.shape[1]
+    MSE = mse_loss_curve(F_out, F_targets)
     return MSE
 
-mse_loss = nn.MSELoss()
+mse_loss_pk = nn.MSELoss()
 
 def MSE_pk(outputs, targets, pk_weight):
-    MSE_pk = pk_weight*mse_loss(outputs, targets)
+    MSE_pk = pk_weight*mse_loss_pk(outputs, targets)
     return MSE_pk
 
 

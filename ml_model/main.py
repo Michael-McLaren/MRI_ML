@@ -49,18 +49,18 @@ def main():
                                         val_data=val,
                                         test_data=test, 
                                         scaler = scaler,
-                                        save = True)  # build an experiment object
+                                        save = True,
+                                        use_gpu = True)  # build an experiment object
     
 
-    '''
+    
     best_val_model_loss, best_val_model_idx = mri_experiment.run_experiment()  # run experiment and return experiment metrics
     print('\n best val model loss: ', best_val_model_loss)
     print('\n best val model idx: ', best_val_model_idx)
-    print('\n best val model loss curve: ', best_val_model_loss_curve)
     '''
     experiment_saved_models = os.path.abspath(os.path.join('trained_models/gru', "saved_models"))
     mri_experiment.load_model(experiment_saved_models, 'train_model', 9)
-    
+    '''
     mri_experiment.loss_plot()
     
     #larger is better
@@ -69,6 +69,8 @@ def main():
     str_1 = '\n E res: {:.3f} \n Fp res: {:.3f} \n vp res: {:.3f}'.format(res[0], res[1], res[2])
     print(str_)
     print(str_1)
+    
+    
     
     mri_experiment.testing1()
     
