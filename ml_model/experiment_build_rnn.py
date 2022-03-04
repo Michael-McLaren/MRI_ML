@@ -290,7 +290,7 @@ class ExperimentBuilder(nn.Module):
             choice = 'val' #for saving filename
 
         for i, (val_x, val_y) in enumerate(data):
-            val_x = val_x[:,:,None].to(self.device)
+            val_x = self.adjust_and_return_inputs(val_x)
             prediction_val = self.model.forward(val_x)
             prediction_val = prediction_val.cpu().detach().numpy()
             val_y = val_y.detach().numpy()
@@ -375,7 +375,19 @@ class ExperimentBuilder(nn.Module):
         plt.show()
         plt.clf()        
 
-
+    def adjust_and_return_inputs(self, inputs):
+        '''
+        Adjusts the inputs depending on what model is being used
+        Needed so i dont need to make two seperate files for each model
+        '''
+        
+        if self.model. __class__. __name__ == 'GRUModel':
+            return inputs[:,:,None].to(self.device)
+        
+        else:
+            return inputs.to(self.device)
+        
+    
     def run_experiment(self):
         
         #this is for the mean values
@@ -396,7 +408,7 @@ class ExperimentBuilder(nn.Module):
                 for idx, (x, y) in enumerate(self.train_data):  # get data batches
                     #(batchsize, seqlen) to (batchsize, seqlen, num_features)
                     
-                    x = x[:,:,None].to(self.device)
+                    x = self.adjust_and_return_inputs(x)
                     y = y.to(self.device)
                     loss, loss_pk, loss_curve = self.run_train_iter(x=x, y=y)  # take a training iter step
                     current_epoch_losses["train_loss"].append(loss)  # add current iter loss to the train loss list
@@ -409,7 +421,7 @@ class ExperimentBuilder(nn.Module):
             #validation run through
             with tqdm.tqdm(total=len(self.val_data)) as pbar_val:  # create a progress bar for validation
                 for x, y in self.val_data:  # get data batches
-                    x = x[:,:,None].to(self.device)
+                    x = self.adjust_and_return_inputs(x)
                     y = y.to(self.device)
                     loss, loss_pk, loss_curve = self.run_evaluation_iter(x=x, y=y)  # run a validation iter
                     current_epoch_losses["val_loss"].append(loss)  # add current iter loss to val loss list.
@@ -518,7 +530,7 @@ class ExperimentBuilder(nn.Module):
                 
             for i, (test_x, test_y) in enumerate(self.train_data):
                 j = np.random.randint(low = 0, high = test_x.shape[0])
-                test_x = test_x[:,:,None].to(self.device)
+                test_x = self.adjust_and_return_inputs(test_x)
                 prediction_test = self.model.forward(test_x)
                 
                 prediction_test = prediction_test.cpu().detach().numpy()
@@ -534,7 +546,7 @@ class ExperimentBuilder(nn.Module):
             
             for i, (test_x, test_y) in enumerate(self.val_data):
                 j = np.random.randint(low = 0, high = test_x.shape[0])
-                test_x = test_x[:,:,None].to(self.device)
+                test_x = self.adjust_and_return_inputs(test_x)
 
                 prediction_test = self.model.forward(test_x)
                 
@@ -549,7 +561,7 @@ class ExperimentBuilder(nn.Module):
                 
             for i, (test_x, test_y) in enumerate(self.test_data):
                 j = np.random.randint(low = 0, high = test_x.shape[0])
-                test_x = test_x[:,:,None].to(self.device)
+                test_x = self.adjust_and_return_inputs(test_x)
 
                 prediction_test = self.model.forward(test_x)
                 

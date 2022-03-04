@@ -35,7 +35,8 @@ def main():
     layer_dim = 3
     output_dim = 3
     dropout_prob = 0.5
-    custom_conv_net = GRUModel(input_dim, hidden_dim, layer_dim, output_dim, dropout_prob)
+    #custom_conv_net = GRUModel(input_dim, hidden_dim, layer_dim, output_dim, dropout_prob)
+    custom_conv_net = NeuralNet_Dropout(enc_sizes, p = dropout_prob)
     print(custom_conv_net)
     
     mri_experiment = ExperimentBuilder(network_model=custom_conv_net,
