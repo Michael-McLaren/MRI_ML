@@ -94,14 +94,18 @@ class ExperimentBuilder(nn.Module):
             print("use CPU")
             self.device = torch.device('cpu')  # sets the device to be CPU
             print(self.device)
-        # Set best models to be at 1000 since we are just starting
+            
+        # Set best models to be at x since we are just starting
         self.best_val_model_idx = 0
         self.best_val_model_loss = 1e10
-        
-        #just so i have another metric to judge off
+        self.best_val_model_loss_curve = 1e10
+        self.best_val_model_loss_pk = 1e10
+
         
         self.num_epochs = num_epochs
-        self.criterion = combined # send the loss computation to the GPU
+        self.criterion = combined 
+        self.criterion_pk = MSE_pk
+        self.criterion_curve = MSE_curve
 
         self.AIF = torch.from_numpy(np.load("data/AIF.npy"))
         self.time = np.arange(0,366,2.45)
@@ -117,12 +121,15 @@ class ExperimentBuilder(nn.Module):
         loss = self.criterion(output, y, 
                               pk_weight = self.pk_weight, curve_weight = self.curve_weight)
         
+        loss_pk = self.criterion_pk(output, y, pk_weight = self.pk_weight)
+        loss_curve = self.criterion_curve(output, y, curve_weight = self.curve_weight)
+        
 
         
         loss.backward()
         self.optimizer.step()
            
-        return loss.item()
+        return loss.item(), loss_pk.item(), loss_curve.item()
     
     def run_evaluation_iter(self, x, y):
         """
@@ -137,8 +144,10 @@ class ExperimentBuilder(nn.Module):
                 loss = self.criterion(output, y, 
                                       pk_weight = self.pk_weight, curve_weight = self.curve_weight)
                 
+                loss_pk = self.criterion_pk(output, y, pk_weight = self.pk_weight)
+                loss_curve = self.criterion_curve(output, y, curve_weight = self.curve_weight)
         
-        return loss.item()
+        return loss.item(), loss_pk.item(), loss_curve.item()
     
     def save_model(self, model_save_dir, model_save_name, model_idx, best_validation_model_idx,
                    best_validation_model_loss):
@@ -241,12 +250,46 @@ class ExperimentBuilder(nn.Module):
         plt.savefig(file_name)
         plt.clf()
         
+        #pk loss plot
+        for key, value in list(stats.items())[2:4]:
+            plt.plot(value, label = key)
+            
+        file_name = os.path.join(self.experiment_logs, 'pk_loss')
+            
+        plt.legend()
+        plt.xlabel("Epoch")
+        plt.ylabel("PK Loss")
+        plt.savefig(file_name)
+        plt.clf()
+        
+        #curve loss plot
+        for key, value in list(stats.items())[4:6]:
+            plt.plot(value, label = key)
+            
+        file_name = os.path.join(self.experiment_logs, 'curve_loss')
+            
+        plt.legend()
+        plt.xlabel("Epoch")
+        plt.ylabel("Curve Loss")
+        plt.savefig(file_name)
+        plt.clf()
+        
     
-    def pk_dist(self):
+    def pk_dist(self, choice):
         self.model.eval()
         
+        #so that i can check to see how it does on different datasets
+        #mostly for the synthetic dataset because im leaving out the test set
+        if choice == 'val':
+            data = self.val_data
+        elif choice == 'test':
+            data =self.test_data
+        else:
+            print('wrong input use val or test. Defaulting to val')
+            data = self.val_data
+            choice = 'val' #for saving filename
 
-        for i, (val_x, val_y) in enumerate(self.val_data):
+        for i, (val_x, val_y) in enumerate(data):
             val_x = val_x[:,:,None].to(self.device)
             prediction_val = self.model.forward(val_x)
             prediction_val = prediction_val.cpu().detach().numpy()
@@ -265,7 +308,7 @@ class ExperimentBuilder(nn.Module):
         hist_0 = ax.hist(full_val[:,0], label = 'Predicted', alpha = 0.5, bins = 100, range = [0,1])
         hist_3 = ax.hist(full_val[:,3], label = 'True', alpha = 0.5, bins = 100, range = [0,1])
         fig.legend()
-        file_name = os.path.join(self.experiment_logs, 'E_hist.png')
+        file_name = os.path.join(self.experiment_logs, 'E_hist_'+choice+'.png')
         if self.save:
             plt.savefig(file_name)
         plt.clf()
@@ -280,7 +323,7 @@ class ExperimentBuilder(nn.Module):
         hist_1 = ax.hist(full_val[:,1], label = 'Predicted', alpha = 0.5, range = [0,0.02], bins = 100)
         hist_4 = ax.hist(full_val[:,4], label = 'True', alpha = 0.5, range = [0,0.02], bins = 100)
         fig.legend()
-        file_name = os.path.join(self.experiment_logs, 'Fp_hist.png')
+        file_name = os.path.join(self.experiment_logs, 'Fp_hist_'+choice+'.png')
         if self.save:
             plt.savefig(file_name)
         plt.clf()
@@ -294,7 +337,7 @@ class ExperimentBuilder(nn.Module):
         hist_2 = ax.hist(full_val[:,2], label = 'Predicted', alpha = 0.5, bins = 100, range = [0,1])
         hist_5 = ax.hist(full_val[:,5], label = 'True', alpha = 0.5, bins = 100, range = [0,1])
         fig.legend()
-        file_name = os.path.join(self.experiment_logs, 'vp_hist.png')
+        file_name = os.path.join(self.experiment_logs, 'vp_hist_'+choice+'.png')
         if self.save:
             plt.savefig(file_name)
         plt.clf()
@@ -304,14 +347,10 @@ class ExperimentBuilder(nn.Module):
         res = np.abs(hist_2 - hist_5)
         res_vp = res.sum()
         
-        #larger is better
-        E_stat = ks_2samp(full_val[:,0], full_val[:,3])[0]
-        Fp_stat = ks_2samp(full_val[:,1], full_val[:,4])[0]
-        vp_stat = ks_2samp(full_val[:,2], full_val[:,5])[0]
 
 
         #divide by 100 cause the values are so large
-        return (E_stat, Fp_stat, vp_stat), (res_E, res_Fp, res_vp)
+        return (res_E, res_Fp, res_vp)
         
         
     def example_fit(self, y, pred_y, x):
@@ -340,11 +379,16 @@ class ExperimentBuilder(nn.Module):
     def run_experiment(self):
         
         #this is for the mean values
-        total_losses = {"train_loss": [], "val_loss": []}  # initialize a dict to keep the per-epoch metrics
+        total_losses = {"train_loss": [], "val_loss": [], 
+                        "pk_train_loss": [], "pk_val_loss": [], 
+                        "curve_train_loss": [], "curve_val_loss": []}  # initialize a dict to keep the per-epoch metrics
         
         for epoch_idx in range(self.num_epochs):
             epoch_start_time = time.time()
-            current_epoch_losses = {"train_loss": [], "val_loss": []} #mini batch train and val loss
+            current_epoch_losses = {"train_loss": [], "val_loss": [], 
+                        "pk_train_loss": [], "pk_val_loss": [], 
+                        "curve_train_loss": [], "curve_val_loss": []} #mini batch train and val loss
+            
             self.current_epoch = epoch_idx
             
             #training run through
@@ -354,10 +398,10 @@ class ExperimentBuilder(nn.Module):
                     
                     x = x[:,:,None].to(self.device)
                     y = y.to(self.device)
-                    loss = self.run_train_iter(x=x, y=y)  # take a training iter step
+                    loss, loss_pk, loss_curve = self.run_train_iter(x=x, y=y)  # take a training iter step
                     current_epoch_losses["train_loss"].append(loss)  # add current iter loss to the train loss list
-  # add current iter loss to the train loss list
-
+                    current_epoch_losses["pk_train_loss"].append(loss_pk)
+                    current_epoch_losses["curve_train_loss"].append(loss_curve)
                     #descriptive stuff to make it pretty
                     pbar_train.update(1)
                     pbar_train.set_description("batch loss: {:.4f}".format(loss))
@@ -367,25 +411,29 @@ class ExperimentBuilder(nn.Module):
                 for x, y in self.val_data:  # get data batches
                     x = x[:,:,None].to(self.device)
                     y = y.to(self.device)
-                    loss = self.run_evaluation_iter(x=x, y=y)  # run a validation iter
+                    loss, loss_pk, loss_curve = self.run_evaluation_iter(x=x, y=y)  # run a validation iter
                     current_epoch_losses["val_loss"].append(loss)  # add current iter loss to val loss list.
-                   
+                    current_epoch_losses["pk_val_loss"].append(loss_pk)
+                    current_epoch_losses["curve_val_loss"].append(loss_curve)
                                         
                     #descriptive stuff to make it pretty
                     pbar_val.update(1)  # add 1 step to the progress bar
                     pbar_val.set_description("batch loss: {:.4f}".format(loss))
                     
-            #if it does better on the val data then save it
             val_mean_loss = np.mean(current_epoch_losses['val_loss'])
+            val_mean_loss_curve = np.mean(current_epoch_losses['curve_val_loss'])
+            val_model_loss_pk = np.mean(current_epoch_losses['pk_val_loss'])
 
             #update the learning rate
             self.lr_scheduler(val_mean_loss)
             
                 
-            
+            #if it does better on the val data then save it
             if val_mean_loss < self.best_val_model_loss:  # save the best val loss
                 self.best_val_model_loss = val_mean_loss  # set the best val model loss to be current epoch's val accuracy
                 self.best_val_model_idx = epoch_idx  # set the experiment-wise best val idx to be the current epoch's idx
+                self.best_val_model_loss_curve = val_mean_loss_curve
+                self.best_val_model_loss_pk = val_model_loss_pk
                 
                 if self.save:
                     self.save_model(model_save_dir=self.experiment_saved_models,
@@ -416,7 +464,7 @@ class ExperimentBuilder(nn.Module):
                 break
         
         
-        return self.best_val_model_loss, self.best_val_model_idx
+        return self.best_val_model_loss, self.best_val_model_idx, self.best_val_model_loss_curve, self.best_val_model_loss_pk
     
     def testing(self):
         

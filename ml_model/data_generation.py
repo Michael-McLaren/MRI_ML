@@ -351,15 +351,16 @@ class uterus(tissue):
         
         scaler.fit(X_train_synth)
         
+        #using real instead of the test set here, because its larger and part of the same dataset
         X_train = scaler.transform(X_train_synth)
         X_val = scaler.transform(X_val_synth)
-        X_test = scaler.transform(X_test)
+        X_real = scaler.transform(X_real)
         
         train = uterus.create_dataloader(X_train, y_train_synth, batch_train, shuffle)
         val = uterus.create_dataloader(X_val, y_val_synth, batch_test, shuffle)
-        test = uterus.create_dataloader(X_test, y_test, batch_test, shuffle)
+        real = uterus.create_dataloader(X_real, y_real, batch_test, shuffle)
         
-        return train, val, test, scaler
+        return train, val, real, scaler
 
         
         
